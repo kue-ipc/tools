@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# = log_clean
+# compatible with Ruby 2.0.0
+#
+# Copyright 2019 Kyoto University of Education
+# The MIT License
+# https://opensource.org/licenses/MIT
+
+begin
+  require 'log_manager/clean'
+rescue LoadError
+  require_relative '../lib/log_manager/clean'
+end
+
+if $0 == __FILE__
+  clean = LogManager::Clean.new
+  clean.compress_and_delete
+end

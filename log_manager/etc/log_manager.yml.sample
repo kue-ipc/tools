@@ -1,0 +1,7 @@
+---
+root_dir: /data/log
+logger_file: /data/log/log_manager/log_manager.log
+logger_level: 1
+noop: false
+# file_excludes:
+# - !ruby/regexp /^\./

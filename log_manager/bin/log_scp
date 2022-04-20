@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# = log_scp
+# compatible with Ruby 2.0.0
+#
+# Copyright 2019 Kyoto University of Education
+# The MIT License
+# https://opensource.org/licenses/MIT
+
+begin
+  require 'log_manager/scp'
+rescue LoadError
+  require_relative '../lib/log_manager/scp'
+end
+
+if $0 == __FILE__
+  config = LogManager::Utils.yaml_load_symbolize(DATA)
+  scp = LogManager::Scp.new(config)
+  config[:hosts].each do |host|
+    host_save_dir = File.join(config[:save_dir], host[:name])
+    host[:targets].each do |target|
+      opts = {}
+      if target[:includes]
+        opts[:includes] = target[:includes]
+      end
+      scp.sync(
+        host[:host],
+        target[:dir],
+        File.join(host_save_dir, target[:name]),
+        opts
+      )
+    end
+  end
+end
