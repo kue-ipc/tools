@@ -10,49 +10,71 @@
 require 'logger'
 require 'optparse'
 
+require 'log_manager'
+require 'log_manager/command/config'
+require 'log_manager/command/clean'
+require 'log_manager/command/rsync'
+require 'log_manager/command/scp'
+
 module LogManager
-
-
-  class Command
+  module Command
     HELP_MESSAGE = <<-MESSAGE
-Log Manager #{VERSION}
-Usage: lmg subcommand [options]
-Subcommands:
-  config ... show config
-  clean  ... clean and compress log
-  rsync  ... rysnc log from remote
-  scp    ... scp log from remote
-  help   ... display this messages
+Log Manager #{LogManager::VERSION}
+Usage: lmg [options] subcommand [subcommand options]
+subcommand:
+  config      show config yaml
+  clean       clean and compress log
+  rsync       rysnc log from remote
+  scp         scp log from remote
+options:
+  -c CONFIG   specify config
+subcommand options
+  -h HOST     specify host
+  -n          no operation
     MESSAGE
 
-    def run(argv)
-      opt = OptParser.new
+    def self.run(argv)
+      parser = OptionParser.new
 
-      # opt.on('-h')
-      opt.parse!(ARGV)
+      opts = {}
+      parser.on('-c CONFIG') { |v| opts[:config_path] = v} 
 
-
-
-      if argv.empty?
-        print HELP_MESSAGE
-        return 0
+      subparsers = Hash.new do |h, k|
+        $stderr.puts "No such subcommand: #{k}"
+        exit 1
       end
 
-      subcommand = argv[0]
-      options = argv[1, argv.size - 1]
-      p options
+      subparsers['config'] = OptionParser.new
 
-      case subcommand
+      subparsers['clean'] = OptionParser.new
+      subparsers['clean'].on('-n') { opts[:noop] = true}
+
+      subparsers['rsync'] = OptionParser.new
+      subparsers['rsync'].on('-h HOST') { |v| opts[:host] = v}
+      subparsers['rsync'].on('-n') { opts[:noop] = true}
+
+      subparsers['scp'] = OptionParser.new
+      subparsers['scp'].on('-h HOST') { |v| opts[:host] = v}
+      subparsers['scp'].on('-n') { opts[:noop] = true}
+     
+      parser.order!(argv)
+      if argv.empty?
+        puts HELP_MESSAGE
+        exit 1
+      end
+
+      opts[:subcommand] = argv.shift
+      subparsers[opts[:subcommand]].parse!(argv)
+
+      case opts[:subcommand]
       when 'config'
+        Command::Config.run(**opts)
       when 'clean'
+        Command::Clean.run(**opts)
       when 'rsync'
+        Command::Rsync.run(**opts)
       when 'scp'
-      when 'help'
-        print HELP_MESSAGE
-        return 0
-      else
-        warn 'Error: unknown subcommand'
-        return 1
+        Command::Scp.run(**opts)
       end
     end
   end

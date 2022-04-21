@@ -8,12 +8,9 @@
 # The MIT License
 # https://opensource.org/licenses/MIT
 
-$: << File.expand_path('../lib', __dir__)
+lib_path = File.expand_path('../lib', __dir__)
+$: << lib_path if FileTest.directory?(lib_path)
 
 require 'log_manager/command'
 
-if $0 == __FILE__
-  command = LogManager::Command.new
-  code = command.run(ARGV)
-  exit code
-end
+LogManager::Command.run(ARGV)

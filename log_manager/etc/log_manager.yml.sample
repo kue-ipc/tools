@@ -1,7 +1,50 @@
+sample config
 ---
-root_dir: /data/log
-logger_file: /data/log/log_manager/log_manager.log
-logger_level: 1
-noop: false
-# file_excludes:
-# - !ruby/regexp /^\./
+root_dir: /log
+logger:
+  file: /var/log/log_manarger/log_manager.log
+  level: 1
+  shift: weekly
+clean:
+  excludes:
+    - '*.old'
+  period_retention: 63244800 # 2 years
+  period_nocompress: 172800 # 2 days
+  compress:
+    cmd: /bin/gzip
+    ext: .gz
+    ext_list: [.gz, .bz2, .xz, .tgz, .tbz, .txz, .zip, .7z, .Z]
+rsync:
+  save_dir: rsync
+  hosts:
+  - name: sv01
+    host: sv01.example.jp
+    user: root
+    targets:
+    - name: httpd
+      dir: /var/log/httpd
+    - name: nginx
+      dir: /var/log/nginx
+  - name: sv02
+    host: sv02.example.jp
+    user: squid
+    targets:
+    - name: squid
+      dir: /var/log/squid
+      includes:
+        - '*.log'
+        - '*.log.gz'
+      excludes:
+        - 'cache.*'
+scp:
+  save_dir: scp
+  hosts:
+  - name: app
+    host: app.example.jp
+    user: app
+    targets:
+    - name: app
+      dir: /var/log/squid
+      includes:
+        - '*.log'
+        - '*.log.gz'
