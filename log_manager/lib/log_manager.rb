@@ -8,4 +8,7 @@
 # https://opensource.org/licenses/MIT
 
 module LogManager
+  VERSION = '1.0.0'
 end
+
+VERSION = LogManager::VERSION

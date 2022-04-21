@@ -8,13 +8,12 @@
 # The MIT License
 # https://opensource.org/licenses/MIT
 
-begin
-  require 'log_manager/command'
-rescue LoadError
-  require_relative '../lib/log_manager/command'
-end
+$: << File.expand_path('../lib', __dir__)
+
+require 'log_manager/command'
 
 if $0 == __FILE__
   command = LogManager::Command.new
-  command(ARGV)
+  code = command.run(ARGV)
+  exit code
 end
