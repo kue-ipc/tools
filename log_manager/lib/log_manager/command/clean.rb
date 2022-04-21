@@ -28,7 +28,7 @@ module LogManager
 
       def need_check?(path)
         name =
-          if @config[:clean][:compress_ext_list].include?(File.extname(path))
+          if @config[:clean][:compress][:ext_list].include?(File.extname(path))
             File.basename(path, File.extname(path))
           else
             File.basename(path)
@@ -44,19 +44,19 @@ module LogManager
 
       def need_compress?(path)
         need_check?(path) &&
-          !@config.compress_ext_list.include?(File.extname(path)) &&
+          !@config[:clean][:compress][:ext_list].include?(File.extname(path)) &&
           File.stat(path).mtime < @compress_before_time
       end
 
       def compressed_path(path)
-        path + @config.compress_ext
+        path + @config[:clean][:compress][:ext]
       end
 
       def compress_cmd
-        if @config.compress_cmd.is_a?(String)
-          @config.compress_cmd.split
+        if @config[:clean][:compress][:cmd].is_a?(String)
+          @config[:clean][:compress][:cmd].split
         else
-          @config.compress_cmd
+          @config[:clean][:compress][:cmd]
         end
       end
 
@@ -72,7 +72,7 @@ module LogManager
         run_cmd(cmd)
       end
 
-      def compress_and_delete(path = @config.rood_dir)
+      def compress_and_delete(path = @config[:root_dir])
         check_path(path)
         begin
           unless FileTest.exist?(path)
@@ -110,6 +110,7 @@ module LogManager
       rescue StandardError => e
         log_error("error occured #{e.class}: #{path}")
         log_error("error message: #{e.message}")
+        raise
       end
     end
   end

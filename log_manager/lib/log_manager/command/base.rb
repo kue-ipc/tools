@@ -19,12 +19,12 @@ module LogManager
       def initialize(noop: false, **opts)
         super
 
-        @noop = nopp
+        @noop = noop
         log_debug('noop mode') if @noop
       end
 
       def check_path(path)
-        return if path.start_with?(@config[:root_dir])
+        return if path.is_a?(String) && path.start_with?(@config[:root_dir])
 
         msg = "path must start with #{@config[:root_dir]}, but: #{path}"
         log_error(msg)
