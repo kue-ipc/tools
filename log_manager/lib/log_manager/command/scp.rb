@@ -154,7 +154,6 @@ module LogManager
           end
         rescue => e
           log_error("error message: #{e.message}")
-          raise
         end
       end
 
