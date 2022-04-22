@@ -65,9 +65,9 @@ module LogManager
         end
       end
 
-      def run_cmd(cmd)
+      def run_cmd(cmd, noop: @noop)
         log_info("run: #{cmd.join(' ')}")
-        if @noop
+        if noop
           log_debug('-- noop --')
           return '', '', nil
         end

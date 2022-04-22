@@ -163,9 +163,7 @@ module LogManager
         log_debug("get list from remote: #{remote}:#{dir}")
         ls_cmd = REMOTE_LS + ' -- ' + dir
         cmd = [@ssh_cmd, remote, ls_cmd]
-        stdout, stderr, status = run_cmd(cmd)
-
-        return [] if status.nil? # for noop mode
+        stdout, stderr, status = run_cmd(cmd, noop: false)
 
         unless status.success?
           log_error("command failed, status: #{status.to_i}")

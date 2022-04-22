@@ -90,15 +90,19 @@ module LogManager
         check_path(dst)
         begin
           make_dir(dst)
+          opts = []
+          opts << '-n' if @noop
+          opts.concat(RSYNC_OPTIONS)
+          includes.each { |pattern| opts << "--include=#{pattern}" } if includes
+          excludes.each { |pattern| opts << "--exclude=#{pattern}" } if excludes
+
           cmd = [
             @rsync_cmd,
-            *RSYNC_OPTIONS,
-            *(includes || []).map { |pattern| "--include=#{pattern}" },
-            *(excludes || []).map { |pattern| "--exclude=#{pattern}" },
+            *opts,
             "#{remote}:#{src}/",
             "#{dst}/"
           ]
-          run_cmd(cmd)
+          run_cmd(cmd, noop: false)
         rescue => e
           log_error("error message: #{e.message}")
         end
