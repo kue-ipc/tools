@@ -38,9 +38,9 @@ module LogManager
       def make_dir(dir)
         check_path(dir)
         if FileTest.directory?(dir)
-          log_debug("A directoy is existed, skip to make: #{dir}")
+          log_debug("a directoy is existed, skip to make: #{dir}")
         else
-          log_info("Make a directoy: #{dir}")
+          log_info("make a directoy: #{dir}")
           FileUtils.mkdir_p(dir, noop: @noop)
         end
       end
@@ -89,7 +89,7 @@ module LogManager
         if status.success?
           log_info('==> normal exit')
         else
-          log_warn("==> abnormal exit code: #{status.exitstatus}")
+          log_error("==> abnormal exit code: #{status.exitstatus}")
         end
         [stdout, stderr, status]
       end

@@ -19,11 +19,11 @@ module LogManager
       FTYPE_NAMES = {
         'b' => 'blockSpecial',
         'c' => 'characterSpecial',
-        'd' => 'directory'
-        'l' => 'link'
-        's' => 'socket'
-        'p' => 'fifo'
-        '-' => 'file'
+        'd' => 'directory',
+        'l' => 'link',
+        's' => 'socket',
+        'p' => 'fifo',
+        '-' => 'file',
       }
 
       def self.run(**opts)
@@ -103,31 +103,43 @@ module LogManager
           remote_list = get_list_remote(remote, src)
           local_list = get_list_local(dst)
 
-          remote_names = remote_list.keys
-          if includes
-            remote_names.select! do |name|
-              includes.any?  { |ptn| File.fnmatch?(ptn, name) }
-            end
+          local_dict = {}
+          local_list.each do |local_file|
+            local_dict[local_file[:name]] = local_file
           end
 
-          if excludes
-            remote_names.reject! do |name|
-              excludes.any?  { |ptn| File.fnmatch?(ptn, name) }
-            end
-          end
+          remote_list.each do |remote_file|
+            next unless remote_file[:ftype] == 'file'
 
-          remote_names.each do |name|
-            if local_list.key?(name) &&
-               remote_list[name] <= local_list[name]
-              log_debug("skip a file: #{name}")
+            name = remote_file[:name]
+            if includes &&
+               includes.none?  { |ptn| File.fnmatch?(ptn, name) }
               next
+            end
+            if excludes &&
+               excludes.any?  { |ptn| File.fnmatch?(ptn, name) }
+              next
+            end
+
+            if (local_file = local_dict[name])
+              if local_file[:ftype] != 'file'
+                log_warn("duplicate with other than file: #{name}")
+                next
+              elsif remote_file[:mtime] <= local_file[:mtime]
+                log_debug("skip a file: #{name}")
+                next
+              end
             end
 
             compressed_name = compressed_path(name)
-            if local_list.key?(compressed_name) &&
-               remote_list[name] <= local_list[compressed_name]
-              log_debug("skip a file (compressed): #{name}")
-              next
+            if (local_file = local_dict[compressed_name])
+              if local_file[:ftype] != 'file'
+                log_warn("duplicate with other than file (compressed): #{name}")
+                next
+              elsif remote_file[:mtime] <= local_file[:mtime]
+                log_debug("skip a file (compressed): #{name}")
+                next
+              end
             end
 
             log_info("copy: #{name}")
@@ -142,66 +154,62 @@ module LogManager
           end
         rescue => e
           log_error("error message: #{e.message}")
+          raise
         end
       end
 
       def get_list_remote(remote, dir)
         check_remote_path(dir)
-        log_debug("get list from remote: #{host}:#{dir}")
+        log_debug("get list from remote: #{remote}:#{dir}")
         ls_cmd = REMOTE_LS + ' -- ' + dir
         cmd = [@ssh_cmd, remote, ls_cmd]
         stdout, stderr, status = run_cmd(cmd)
 
-        if status.nil?
-          # noop mode
+        return [] if status.nil? # for noop mode
+
+        unless status.success?
+          log_error("command failed, status: #{status.to_i}")
           return []
         end
 
-        unless status.success?
-          log_error("command failed, status: #{status.code}")
-          raise Error, 'failed to get remote list'
-        end
+        stdout.lines
+          .drop(1) # drop first line
+          .map { |line| parse_ls_line(line) }
+          .reject { |e| ['.', '..'].include?(e[:name]) }
+      end
 
-        file_list = {}
-        # skip first line
-        stdout.each_line.drop(1).each do |line|
-          line_list = line.split
-          name = line_list[8]
-          next if ['.', '..'].include?(name)
-
-          path = File.join(dir, name)
-          ftype = FTYPE_NAMES[line_list[0][0]] || 'unknown'
-          mtime = Time.parse(line_list[5..7].join(' '))
-
-          file_list[name] = {
-            name: name,
-            path: path,
-            ftype: ftype,
-            mtime: mtime,
-          }
-        end
-        file_list
+      def parse_ls_line(line)
+        list = line.split
+        {
+          name: list[8],
+          path: File.join(dir, list[8]),
+          ftype: FTYPE_NAMES[list[0][0]] || 'unknown',
+          mtime: Time.parse(list[5..7].join(' ')),
+        }
       end
 
       def get_list_local(dir)
         check_path(dir)
         log_debug("get list from local: #{dir}")
 
-        file_list = {}
-        Dir.foreach(dir) do |name|
-          next if ['.', '..'].include?(name)
+        unless FileTest.directory?(dir)
+          log_warn("not directory: #{dir}")
+          return []
+        end 
 
-          path = File.join(dir, name)
-          stat = File.stat(path)
+        Dir.entries(dir)
+          .reject { |name| ['.', '..'].include?(name)}
+          .map do |name|
+            path = File.join(dir, name)
+            stat = File.stat(path)
 
-          file_list[name] = {
-            name: name,
-            path: path,
-            ftype: stat.ftype,
-            mtime: stat.mtime,
-          }
-        end
-        file_list
+            {
+              name: name,
+              path: path,
+              ftype: stat.ftype,
+              mtime: stat.mtime,
+            }
+          end
       end
     end
   end
