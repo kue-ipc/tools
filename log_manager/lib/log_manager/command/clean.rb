@@ -24,6 +24,9 @@ module LogManager
         @now = Time.now
         @delete_before_time = @now - @config[:clean][:period_retention]
         @compress_before_time = @now - @config[:clean][:period_nocompress]
+
+        @includes = @config[:clean][:includes]
+        @excludes = @config[:clean][:excludes]
       end
 
       def need_check?(path)
@@ -34,7 +37,15 @@ module LogManager
             File.basename(path)
           end
 
-        @config[:clean][:excludes].none? { |ptn| File.fnmatch(ptn, name) }
+        if @includes && @includes.none? { |ptn| File.fnmatch?(ptn, name) }
+          return false
+        end
+
+        if @excludes && @excludes.any? { |ptn| File.fnmatch?(ptn, name) }
+          return false
+        end
+        
+        true
       end
 
       def need_delete?(path)
@@ -46,10 +57,6 @@ module LogManager
         need_check?(path) &&
           !@config[:clean][:compress][:ext_list].include?(File.extname(path)) &&
           File.stat(path).mtime < @compress_before_time
-      end
-
-      def compressed_path(path)
-        path + @config[:clean][:compress][:ext]
       end
 
       def compress_cmd
@@ -99,7 +106,7 @@ module LogManager
             entries.each do |e|
               compress_and_delete(File.join(path, e))
             end
-            if (Dir.entries(path) - ['.', '..']).empty?
+            if path != @config[:root_dir] && (Dir.entries(path) - ['.', '..']).empty?
               log_info("remove an empty dir: #{path}")
               remove_dir(path)
             end

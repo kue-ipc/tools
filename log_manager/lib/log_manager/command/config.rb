@@ -30,22 +30,24 @@ module LogManager
         },
 
         clean: {
-          excludes: [], # fnmatch
           period_retention: 60 * 60 * 24 * 366 * 2, # 2 years
           period_nocompress: 60 * 60 * 24 * 2,      # 2 days
           compress: {
-            cmd: '/bin/gzip',
+            cmd: '/usr/bin/gzip',
             ext: '.gz',
             ext_list: %w[.gz .bz2 .xz .tgz .tbz .txz .zip .7z .Z],
           },
         },
 
         rsync: {
+          cmd: '/usr/bin/rsync',
           save_dir: 'rsync',
           hosts: [],
         },
 
         scp: {
+          ssh_cmd: '/usr/bin/ssh',
+          scp_cmd: '/usr/bin/scp',
           save_dir: 'scp',
           hosts: [],
         },

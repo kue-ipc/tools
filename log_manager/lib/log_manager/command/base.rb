@@ -20,7 +20,7 @@ module LogManager
         super
 
         @noop = noop
-        log_debug('noop mode') if @noop
+        log_info('noop mode') if @noop
       end
 
       def check_path(path)
@@ -29,6 +29,10 @@ module LogManager
         msg = "path must start with #{@config[:root_dir]}, but: #{path}"
         log_error(msg)
         raise Error, msg
+      end
+
+      def compressed_path(path)
+        path + @config[:clean][:compress][:ext]
       end
 
       def make_dir(dir)
@@ -78,7 +82,7 @@ module LogManager
 
         unless stderr.empty?
           stderr.each_line.with_index do |line, idx|
-            log_debug("--> stderr[#{idx}] : #{line.chomp}")
+            log_warn("--> stderr[#{idx}] : #{line.chomp}")
           end
         end
 
