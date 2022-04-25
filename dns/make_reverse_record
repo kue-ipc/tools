@@ -1,10 +1,16 @@
 #!/bin/env ruby
 # frozen_string_literal: true
+
+# make rverse record v1.1
 #
-# make rverse record v1.0
+# Usage
+# You must write custom settings
+#   `DATA` bellow __END__
+# or
+#   `make_reverse_recored.yml`` file in same directory
 #
 # The MIT License
-# Copyright (c) 2018 Kyoto University of Education
+# Copyright (c) 2018,2022 Kyoto University of Education
 # https://opensource.org/licenses/MIT
 
 require 'ipaddr'
@@ -170,7 +176,14 @@ class ZoneFile
 end
 
 if $0 == __FILE__
-  config = YAML.load(IO.read(File.join(__dir__, 'make_reverse_record.yml')))
+  setting_file = File.join(__dir__, 'make_reverse_record.yml')
+
+  config =
+    if FileTest.file?(setting_file)
+      YAML.load(IO.read(setting_file))
+    else
+      YAML.load(DATA)
+    end
 
   reverse_list = config['ip_list'].map do |ip_str|
     ReverseRecord.new(ip_str)
@@ -219,3 +232,41 @@ if $0 == __FILE__
   end
   puts "success"
 end
+
+__END__
+# example
+---
+save_dir: '/etc/nsd/master/rev'
+zone_list:
+  - domain: 'example.jp'
+    file: '/etc/nsd/master/example.zone'
+ip_list:
+  - '10.0.0.0/8'
+  - '172.16.0.0/16'
+  - '172.17.0.0/16'
+  - '172.18.0.0/16'
+  - '172.19.0.0/16'
+  - '172.20.0.0/16'
+  - '172.21.0.0/16'
+  - '172.22.0.0/16'
+  - '172.23.0.0/16'
+  - '172.24.0.0/16'
+  - '172.25.0.0/16'
+  - '172.26.0.0/16'
+  - '172.27.0.0/16'
+  - '172.28.0.0/16'
+  - '172.29.0.0/16'
+  - '172.30.0.0/16'
+  - '172.31.0.0/16'
+  - '192.168.0.0/16'
+zone_info:
+  ttl: 86400
+  soa:
+    ns: ns.example.jp.
+    mail: admin.example.jp.
+    reflesh: 10800
+    retry: 3600
+    expire: 3600000
+    minimu: 86400
+  ns_list:
+    - ns.example.jp.
