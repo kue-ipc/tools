@@ -1,0 +1,15 @@
+---
+mail:
+  smtp:
+    server: smtp.example.jp
+  from: no-reply@example.jp
+  to: admin@example.jp
+drive: 'D:'
+keep:
+  monthly: 3
+  weekly: 5
+  daily: 15
+  hourly: 30
+threshold:
+  volume: 0.8
+  shadow: 0.8

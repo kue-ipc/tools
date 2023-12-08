@@ -1,0 +1,10 @@
+---
+log:
+  file: sched_vss.log
+  age: 1
+  size: 1048576
+  level: 1 # info
+data_file: sched_vss.jsonl
+mail:
+  smtp:
+    port: 25

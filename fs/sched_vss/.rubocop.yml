@@ -1,0 +1,55 @@
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+
+Layout/LineLength:
+  Max: 80
+Layout/EndOfLine:
+  EnforcedStyle: lf
+Layout/FirstHashElementIndentation:
+  EnforcedStyle: consistent
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+Layout/MultilineMethodCallBraceLayout:
+  EnforcedStyle: same_line
+Layout/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+# double size metrics
+Metrics/AbcSize:
+  Max: 30
+Metrics/BlockLength:
+  Max: 50
+Metrics/BlockNesting:
+  Max: 6
+Metrics/ClassLength:
+  Max: 200
+Metrics/CyclomaticComplexity:
+  Max: 12
+Metrics/MethodLength:
+  Max: 20
+Metrics/ModuleLength:
+  Max: 200
+Metrics/ParameterLists:
+  Max: 10
+Metrics/PerceivedComplexity:
+  Max: 14
+
+Style/Documentation:
+  Enabled: false
+Style/EmptyMethod:
+  EnforcedStyle: expanded
+Style/FormatString:
+  EnforcedStyle: percent
+Style/NumericLiterals:
+  Enabled: false
+Style/SpecialGlobalVars:
+  EnforcedStyle: use_perl_names
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+Style/SymbolArray:
+  MinSize: 8
+Style/WordArray:
+  MinSize: 8
