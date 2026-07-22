@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # Sched VSS -  Scheduling Volume Shadow Copy
-# version 0.1.2
+# version 0.1.3
 # The MIT License
-# Copyrwrite (c) 2023 Kyoto University of Education
+# Copyrwrite (c) 2023-2024 Kyoto University of Education
 
 require 'win32ole'
 require 'net/smtp'
@@ -419,15 +419,20 @@ class SchedVSS
   end
 
   def take_freq(list, format, limit)
+    # collect first items in same format
     freq = {}
     list.sort_by(&:install_date).each do |sc|
       key = sc.install_date.strftime(format)
       next if freq.key?(key)
 
       freq[key] = sc
-      limit -= 1
-      break unless limit.positive?
     end
+
+    # drop items over limt from
+    freq.keys.sort.reverse.drop(limit).each do |key|
+      freq.delete(key)
+    end
+
     freq.values
   end
 
