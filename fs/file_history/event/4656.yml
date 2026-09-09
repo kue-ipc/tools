@@ -1,0 +1,36 @@
+# https://learn.microsoft.com/ja-jp/windows/security/threat-protection/auditing/event-4656
+---
+- name: SubjectUserSid
+  type: SID
+- name: SubjectUserName
+  type: UnicodeString
+- name: SubjectDomainName
+  type: UnicodeString
+- name: SubjectLogonId
+  type: HexInt64
+- name: ObjectServer
+  type: UnicodeString
+- name: ObjectType
+  type: UnicodeString
+- name: ObjectName
+  type: UnicodeString
+- name: HandleId
+  type: Pointer
+- name: TransactionId
+  type: GUID
+- name: AccessList
+  type: UnicodeString
+- name: AccessReason
+  type: UnicodeString
+- name: AccessMask
+  type: HexInt32
+- name: PrivilegeList
+  type: UnicodeString
+- name: RestrictedSidCount
+  type: UInt32
+- name: ProcessId
+  type: Pointer
+- name: ProcessName
+  type: UnicodeString
+- name: ResourceAttributes
+  type: UnicodeString

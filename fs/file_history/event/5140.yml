@@ -1,0 +1,24 @@
+# https://learn.microsoft.com/ja-jp/windows/security/threat-protection/auditing/event-5140
+---
+- name: SubjectUserSid
+  type: SID
+- name: SubjectUserName
+  type: UnicodeString
+- name: SubjectDomainName
+  type: UnicodeString
+- name: SubjectLogonId
+  type: HexInt64
+- name: ObjectType
+  type: UnicodeString
+- name: IpAddress
+  type: UnicodeString
+- name: IpPort
+  type: UnicodeString
+- name: ShareName
+  type: UnicodeString
+- name: ShareLocalPath
+  type: UnicodeString
+- name: AccessMask
+  type: HexInt32
+- name: AccessList
+  type: UnicodeString

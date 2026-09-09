@@ -1,0 +1,12 @@
+# https://learn.microsoft.com/ja-jp/windows/security/threat-protection/auditing/event-4634
+---
+- name: TargetUserSid
+  type: SID
+- name: TargetUserName
+  type: UnicodeString
+- name: TargetDomainName
+  type: UnicodeString
+- name: TargetLogonId
+  type: HexInt64
+- name: LogonType
+  type: UInt32

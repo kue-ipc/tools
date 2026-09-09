@@ -1,0 +1,26 @@
+# https://learn.microsoft.com/ja-jp/windows/security/threat-protection/auditing/event-4670
+---
+- name: SubjectUserSid
+  type: SID
+- name: SubjectUserName
+  type: UnicodeString
+- name: SubjectDomainName
+  type: UnicodeString
+- name: SubjectLogonId
+  type: HexInt64
+- name: ObjectServer
+  type: UnicodeString
+- name: ObjectType
+  type: UnicodeString
+- name: ObjectName
+  type: UnicodeString
+- name: HandleId
+  type: Pointer
+- name: OldSd
+  type: UnicodeString
+- name: NewSd
+  type: UnicodeString
+- name: ProcessId
+  type: Pointer
+- name: ProcessName
+  type: UnicodeString
