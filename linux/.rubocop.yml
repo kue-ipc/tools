@@ -1,0 +1,85 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+Layout/EndOfLine:
+  EnforcedStyle: lf
+Layout/FirstHashElementIndentation:
+  EnforcedStyle: consistent
+Layout/LineLength:
+  Max: 80
+Layout/MultilineMethodCallBraceLayout:
+  EnforcedStyle: same_line
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+Layout/ParameterAlignment:
+  EnforcedStyle: with_fixed_indentation
+  IndentationWidth: 4
+Layout/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+# double size metrics
+Metrics/AbcSize:
+  Max: 30
+Metrics/BlockLength:
+  Max: 50
+  Exclude:
+    - spec/**/*_spec.rb
+Metrics/BlockNesting:
+  Max: 6
+Metrics/ClassLength:
+  Max: 200
+Metrics/CyclomaticComplexity:
+  Max: 12
+Metrics/MethodLength:
+  Max: 20
+Metrics/ModuleLength:
+  Max: 200
+Metrics/ParameterLists:
+  Max: 10
+Metrics/PerceivedComplexity:
+  Max: 14
+
+Style/AccessModifierDeclarations:
+  EnforcedStyle: inline
+Style/AsciiComments:
+  Enabled: false
+Style/BlockDelimiters:
+  EnforcedStyle: line_count_based
+  AllowBracesOnProceduralOneLiners: true
+  BracesRequiredMethods: ['let']
+Style/Documentation:
+  Enabled: false
+Style/EmptyMethod:
+  EnforcedStyle: expanded
+Style/FormatString:
+  EnforcedStyle: percent
+Style/FrozenStringLiteralComment:
+  EnforcedStyle: always_true
+Style/MultilineBlockChain:
+  Enabled: false
+Style/NumericLiterals:
+  MinDigits: 8
+Style/OneLineConditional:
+  Enabled: false
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+Style/RescueStandardError:
+  EnforcedStyle: implicit
+Style/SpecialGlobalVars:
+  EnforcedStyle: use_perl_names
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+Style/SymbolArray:
+  MinSize: 8
+Style/WordArray:
+  MinSize: 8
+
+# applications
+
+Bundler/OrderedGems:
+  Enabled: false

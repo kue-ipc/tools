@@ -1,0 +1,462 @@
+#!/usr/bin/ruby
+# frozen_string_literal: true
+
+# Update & Reboot script
+# v0.1.1
+#
+# Copyright 2024-2025 Kyoto University of Eductaion
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+#
+# Compitable: Ruby 3.0 or higher
+
+require "yaml"
+require "open3"
+require "timeout"
+require "net/smtp"
+require "base64"
+require "socket"
+require "logger"
+
+# Run And Mail
+# v0.1.1
+class RunAndMail
+  def self.progname
+    name
+  end
+
+  def self.default_timeout
+    3600 # 1 hour
+  end
+
+  def self.default_err
+    :err
+  end
+
+  def initialize(progname: self.class.progname,
+      timeout: self.class.default_timeout,
+      err: self.class.default_err, mail: nil,
+      log_file: nil, log_level: :debug, log_age: nil, log_size: nil)
+    @progname = progname
+    @mail = mail
+    @timeout = timeout
+    @err = err
+    @logger = Logger.new(log_file || $stdout, log_age || 0, log_size || 1048576,
+      level: log_level, progname: @progname)
+
+    @hostname = Socket.gethostname
+  end
+
+  def run_and_mail(*cmd)
+    result = run(*cmd)
+    mail(result) if @mail
+    result
+  rescue => e
+    @logger.error e.full_message(highlight: false, order: :top)
+    raise
+  end
+
+  def run_cat(*cmd_list, **opts)
+    result = Result.new
+    cmd_list.each do |cmd|
+      result << run(*cmd, **opts)
+      break unless result.success?
+    end
+    result
+  end
+
+  def run(*cmd, **opts)
+    result = Result.new(cmd_line(*cmd, **opts))
+    @logger.info("run: #{result.run}")
+    result.time_update
+    out, err, status = run_capture(*cmd, **opts)
+    result.time_update
+    @logger.info "run status: #{status_to_s(status)}"
+    @logger.debug "run out: #{out}" if out&.size&.positive?
+    @logger.warn "run err: #{err}" if err&.size&.positive?
+    result.status = status
+    result.out_concat(out)
+    result.err_concat(err)
+    result
+  end
+
+  def status_to_s(status)
+    case status
+    in Process::Status
+      if status.success?
+        "success"
+      elsif status.exited?
+        "failure (#{status.exitstatus})"
+      else
+        "running"
+      end
+    in Symbol | String
+      status.to_s
+    end
+  end
+
+  def mail(result)
+    @logger.info "mail: #{result.run}"
+    message = String.new
+    message << mail_header(result)
+    message << "\n"
+    message << mail_body(result)
+
+    send_mail(message)
+    @logger.info "mail - sent to #{@mail[:to]}"
+  end
+
+  # see Kernel.#spawn parameters
+  def cmd_line(*cmd, **_opts)
+    cmd.shift if cmd.first.is_a?(Hash)
+    cmd[0] = cmd[0].first if cmd.first.is_a?(Array)
+    cmd.join(" ")
+  end
+
+  private def run_capture(*cmd, timeout: @timeout, stdin_data: nil, binmode: false,
+      **opts)
+    out = String.new
+    err = String.new
+    status = nil
+    begin
+      Timeout.timeout(timeout) do
+        stdin, stdout, stderr, wait_thr = run_popen(*cmd, **opts)
+        [stdin, stdout, stderr].compact.each(&:binmode) if binmode
+        readers = [
+          copy_partial_thread(stdout, out),
+          copy_partial_thread(stderr, err),
+        ]
+        stdin.write stdin_data if stdin_data&.size&.positive?
+        stdin.close
+        status = wait_thr.value
+        readers.compact.each(&:join)
+      end
+    rescue Timeout::Error
+      status = :timeout
+      @logger.error "timeout"
+    rescue => e
+      status = :error
+      @logger.error e.full_message(highlight: false, order: :top)
+      err << e.full_message(highlight: false, order: :top)
+    end
+    Thread.pass
+    [out, err, status]
+  end
+
+  private def run_popen(*cmd, err: @err, **opts)
+    case err
+    in :err
+      Open3.popen3(*cmd, **opts)
+    in :out
+      stdin, stdout, wait_thr = Open3.popen2e(*cmd, **opts)
+      stderr = nil
+      [stdin, stdout, stderr, wait_thr]
+    in nil | :close
+      stdin, stdout, wait_thr = Open3.popen2(*cmd, **opts)
+      stderr = nil
+      [stdin, stdout, stderr, wait_thr]
+    end
+  end
+
+  private def copy_partial_thread(src, dst, maxlen: 4096)
+    return if src.nil? || src.closed?
+
+    Thread.new do
+      loop do
+        dst << src.readpartial(maxlen)
+      rescue EOFError
+        break
+      end
+    end
+  end
+
+  private def mail_header(result)
+    <<~MAIL_HEADER
+      From: #{@mail[:from]}
+      To: #{@mail[:to]}
+      #{subject(result)}
+      Content-Type: text/plain; charset="UTF-8"
+      Content-Transfer-Encoding: base64
+    MAIL_HEADER
+  end
+
+  private def mail_body(result)
+    body = String.new
+    body << info(result)
+    [:out, :err].select do |name|
+      result.public_send(name)&.size&.positive?
+    end.each do |name|
+      body << "\n--- #{name} ---\n"
+      body << result.public_send(name)
+    end
+    Base64.encode64(body.force_encoding(Encoding::UTF_8))
+  end
+
+  private def send_mail(message)
+    @logger.debug "smtp"
+    message = message.gsub(/\R/, "\r\n")
+    smtp = Net::SMTP.new(@mail[:smtp][:server] || "localhost",
+      @mail[:smtp][:port] || Net::SMTP.default_port)
+
+    case @mail[:smtp][:starttls]
+    when "auto", :auto
+      smtp.enable_starttls_auto
+    when "always", :always, true
+      smtp.enable_starttls
+    end
+    smtp.enable_tls if @mail[:smtp][:tls]
+
+    smtp_start_opts = @mail[:smtp].slice(:user, :password, :authtype)
+
+    @logger.debug "smtp - start"
+    smtp.start(@hostname, **smtp_start_opts) do
+      @logger.debug "smtp - sned #{message.size} bytes message"
+      smtp.send_message(message, @mail[:from], @mail[:to])
+    end
+  end
+
+  private def subject(result, max_length: 78)
+    hostname = @hostname.split(".", 2).first
+    time = result.first_time || Time.now
+    status = result.status&.to_s&.upcase || "UNKNOWN"
+    info = result.info
+    info = result.run unless info&.size&.positive?
+    header = "Subject: #{@progname} [#{hostname}] " \
+             "#{time.strftime('%Y-%m-%d')} (#{status})"
+    header += " #{info}" if info&.size&.positive?
+    header.delete("^ -~")[0, max_length]
+  end
+
+  private def info(result)
+    <<~INFO
+      #{@progname}
+
+      Hostname: #{@hostname}
+      Run: #{result.run}
+      Status: #{result.status}
+      Time: #{result.time}
+      Info: #{result.info}
+    INFO
+  end
+
+  class Result
+    attr_reader :run, :status, :time, :out, :err, :info
+
+    def initialize(run = nil)
+      @run = run
+      @status = :unknown
+      @time = nil
+      @out = String.new
+      @err = String.new
+      @info = String.new
+    end
+
+    def dup
+      result = Result.new(run)
+      result.status = status
+      result.time_update(time)
+      result.out_concat(out)
+      result.err_concat(err)
+      result.info_concat(info)
+      result
+    end
+
+    def <<(other)
+      @run = [@run, other.run].compact.join(" && ")
+      @status = other.status
+      time_update(other.time)
+      out_concat(other.out)
+      err_concat(other.err)
+      info_concat(other.info)
+      self
+    end
+
+    def +(other)
+      dup << other
+    end
+
+    def status=(status)
+      @status =
+        case status
+        in Symbol
+          status
+        in String
+          status.downcase.intern
+        in Process::Status
+          if status.success?
+            :success
+          elsif status.exited?
+            :failure
+          else
+            :running
+          end
+        end
+    end
+
+    def first_time
+      time&.first
+    end
+
+    def last_time
+      time&.last
+    end
+
+    # time: Time | Range[Time] | Array[Time]
+    def time_update(time = Time.now)
+      return @time if time.nil? # do nothing
+
+      if !time.is_a?(Time)
+        # must be Range or Array-like
+        time_update(time.first)
+        time_update(time.last)
+      elsif @time.nil?
+        @time = Range.new(time, time)
+      elsif time < @time.first
+        @time = Range.new(time, @time.last)
+      elsif time > @time.last
+        @time = Range.new(@time.first, time)
+      else
+        # do nothing
+        @time
+      end
+    end
+
+    def out_concat(str)
+      @out << str
+    end
+
+    def err_concat(str)
+      @err << str
+    end
+
+    def info_concat(str)
+      @info << str
+    end
+
+    def success?
+      @status == :success
+    end
+
+    def out_omit(pattern)
+      omitted_out = String.new
+      @out.each_line do |line|
+        omitted_out << line if line !~ pattern
+      end
+      @out = omitted_out
+    end
+  end
+end
+
+class UpdateReboot < RunAndMail
+  def initialize(force_reboot: false, reboot_wait: 10, **opts)
+    super(err: :out, **opts)
+    @force_reboot = force_reboot
+    @reboot_wait = reboot_wait
+
+    @pkg_manager =
+      if system("which dnf >/dev/null 2>&1")
+        :dnf
+      elsif system("which apt >/dev/null 2>&1")
+        :apt
+      elsif system("which pacman >/dev/null 2>&1")
+        :pacman
+      else
+        raise "No supported package manager was found."
+      end
+  end
+
+  def update_reboot
+    @logger.info "update_reboot"
+    result = update
+    if result.success?
+      if !require_reboot
+        result.info_concat("update only")
+      elsif @reboot_wait.positive?
+        result << reboot
+        result.info_concat("update and reboot +#{@reboot_wait}")
+      else
+        @logger.info "reboot at exit"
+        at_exit { reboot }
+        result.info_concat("update and reboot now")
+      end
+    end
+    mail(result) if @mail
+    result
+  rescue => e
+    @logger.error e.full_message(highlight: false, order: :top)
+    raise
+  end
+
+  def update
+    @logger.info "update"
+    case @pkg_manager
+    in :dnf
+      run_cat("dnf upgrade -q -y")
+    in :apt
+      run_cat("apt update -q", "apt upgrade -q -y")
+    in :pacman
+      run_cat("pacman -Syuq --noconfirm")
+    end
+  end
+
+  def require_reboot
+    @logger.info "require_reboot"
+    return true if @force_reboot
+
+    case @pkg_manager
+    in :dnf
+      !system("dnf needs-restarting -r >/dev/null 2>&1")
+    in :apt
+      FileTest.exist?("/var/run/reboot-required")
+    in :pacman
+      # TODO: always true, but should check libraries
+      # https://unix.stackexchange.com/a/123770
+      # sudo lsof +c 0 | grep 'DEL.*lib'
+      true
+    end
+  end
+
+  def reboot
+    @logger.info "reboot"
+    time =
+      if @reboot_wait.positive?
+        "+#{@reboot_wait}"
+      else
+        "now"
+      end
+    run("shutdown -r #{time}")
+  end
+end
+
+if $0 == __FILE__
+  if Process.euid != 0
+    warn "Only root can run this program."
+    exit(1)
+  end
+
+  opts = YAML.safe_load(DATA, symbolize_names: true)
+  ur = UpdateReboot.new(**opts)
+  result = ur.update_reboot
+
+  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+    warn "waiting a running process..."
+    th.join
+  end
+
+  unless result.success?
+    warn result.status
+    exit 2
+  end
+end
+
+__END__
+---
+mail:
+  from: no-reply@example.jp
+  to: admin@example.jp
+  smtp:
+    server: smtp.example.jp
+    starttls: always
+log_file: /var/log/update_reboot.log
+log_level: debug
+log_age: 2
