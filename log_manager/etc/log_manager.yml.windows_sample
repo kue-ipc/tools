@@ -1,0 +1,11 @@
+# Windows sample
+---
+root_dir: D:\Logs
+clean:
+  compress:
+    cmd: C:\Apps\log_manager\bin\zip_ps
+mail:
+  from: no-reply@exmaple.com
+  to: admin@exmaple.com
+  smtp:
+    server: smtp.example.com

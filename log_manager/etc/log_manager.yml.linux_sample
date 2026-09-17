@@ -1,0 +1,38 @@
+# Linux sample
+---
+root_dir: /log
+mail:
+  from: no-reply@exmaple.com
+  to: admin@exmaple.com
+rsync:
+  hosts:
+  - name: sv01
+    host: sv01.example.jp
+    user: root
+    targets:
+    - name: httpd
+      dir: /var/log/httpd
+    - name: nginx
+      dir: /var/log/nginx
+  - name: sv02
+    host: sv02.example.jp
+    user: squid
+    targets:
+    - name: squid
+      dir: /var/log/squid
+      includes:
+        - '*.log'
+        - '*.log.gz'
+      excludes:
+        - 'cache.*'
+scp:
+  hosts:
+  - name: app
+    host: app.example.jp
+    user: app
+    targets:
+    - name: app
+      dir: /var/log/squid
+      includes:
+        - '*.log'
+        - '*.log.gz'

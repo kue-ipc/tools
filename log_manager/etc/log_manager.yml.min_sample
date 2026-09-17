@@ -1,0 +1,4 @@
+# minimum sample
+# please set the log directory's path to root_dir
+---
+root_dir: /path/to/log

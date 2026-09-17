@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+lib_path = File.expand_path('../lib', __dir__)
+$: << lib_path if FileTest.directory?(lib_path)
+
+require 'log_manager/command'
+
+config_path_list = [
+  File.expand_path('log_manager.yml', __dir__),
+  File.expand_path('../etc/log_manager.yml', __dir__),
+  '/usr/local/etc/log_manager.yml',
+  '/etc/log_manager.yml',
+]
+
+exit LogManager::Command.run(ARGV, config_path_list)

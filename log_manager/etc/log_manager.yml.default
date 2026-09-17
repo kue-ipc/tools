@@ -1,0 +1,35 @@
+# default parameters
+---
+log:
+  file: log_manager/log_manager.log
+  level: info
+  shift: weekly
+mail:
+  smtp:
+    server: localhost
+    port: 25
+check:
+  block_threshold: 0.8
+  inode_threshold: 0.8
+clean:
+  period_retention: 63244800 # 732 days = 2 years
+  period_nocompress: 172800 # 2 days
+  compress:
+    cmd: gzip
+    ext: ".gz"
+    ext_list:
+    - ".gz"
+    - ".bz2"
+    - ".xz"
+    - ".tgz"
+    - ".tbz"
+    - ".txz"
+    - ".zip"
+    - ".7z"
+rsync:
+  cmd: rsync
+  save_dir: rsync
+scp:
+  ssh_cmd: ssh
+  scp_cmd: scp
+  save_dir: scp
