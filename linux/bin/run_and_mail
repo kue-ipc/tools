@@ -1,0 +1,36 @@
+#!/usr/bin/ruby
+# frozen_string_literal: true
+
+# Command script
+# v0.0.1
+#
+# Copyright 2026 Kyoto University of Eductaion
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+#
+# Compitable: Ruby 3.0 or higher
+
+require_relative "../lib/run_and_mail"
+
+if $0 == __FILE__
+  if ARGV.empty?
+    warn "Usage: #{$0} [command and argments...]"
+    exit 1
+  end
+
+  opts = YAML.safe_load(DATA, symbolize_names: true)
+  opts[:log_file] = File.expand_path(opts[:log_file], __dir__) if opts[:log_file]
+
+  ram = RunAndMail.new(**opts)
+  result = ram.run_and_mail(*ARGV)
+
+  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+    warn "waiting a running process..."
+    th.join
+  end
+
+  unless result.success?
+    warn result.status
+    exit 2
+  end
+end

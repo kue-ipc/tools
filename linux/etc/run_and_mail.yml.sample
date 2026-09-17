@@ -1,0 +1,10 @@
+---
+mail:
+  from: no-reply@example.jp
+  to: admin@example.jp
+  smtp:
+    server: smtp.example.jp
+    starttls: always
+log_file: /var/log/update_reboot.log
+log_level: debug
+log_age: 2

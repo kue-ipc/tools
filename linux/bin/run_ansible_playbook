@@ -1,0 +1,71 @@
+#!/usr/bin/ruby
+# frozen_string_literal: true
+
+# Ansible Playbook script
+# v0.1.2
+#
+# Copyright 2023-2025 Kyoto University of Eductaion
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+#
+# Compitable: Ruby 3.0 or higher
+
+require_relative "../lib/ansible_playbook"
+
+if $0 == __FILE__
+  if ARGV.empty?
+    warn "Usage: #{$0} [ansible-playbook's argments...]"
+    exit 1
+  end
+
+  playbooks = []
+  playbook_opts = {
+    check: false,
+    limit: nil,
+    extra_vars: [],
+  }
+  pre_playbooks = []
+  post_playbooks = []
+
+  while (arg = ARGV.shift)
+    if arg.start_with?("-")
+      case arg
+      in "-C" | "--check"
+        playbook_opts[:check] = true
+      in "-l" | "--limit"
+        playbook_opts[:limit] = ARGV.shift
+      in "-e" | "--extra-vars"
+        playbook_opts[:extra_vars] << ARGV.shift
+      in "-p" | "--pre"
+        pre_playbooks << ARGV.shift
+      in "-P" | "--post"
+        post_playbooks << ARGV.shift
+      in "-h" | "--help"
+        warn "Usage: #{$0} [ansible-playbook's argments...]"
+        exit 1
+      end
+    else
+      playbooks << arg
+    end
+  end
+
+  opts = YAML.safe_load(DATA, symbolize_names: true)
+  if opts[:log_file]
+    opts[:log_file] = File.expand_path(opts[:log_file], __dir__)
+  end
+  opts[:pre] = pre_playbooks unless pre_playbooks.empty?
+  opts[:post] = post_playbooks unless post_playbooks.empty?
+
+  ap = AnsiblePlaybook.new(**opts)
+  result = ap.playbook(playbooks, **playbook_opts)
+
+  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+    warn "waiting a running process..."
+    th.join
+  end
+
+  unless result.success?
+    warn result.status
+    exit 2
+  end
+end

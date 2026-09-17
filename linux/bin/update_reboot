@@ -1,0 +1,34 @@
+#!/usr/bin/ruby
+# frozen_string_literal: true
+
+# Update & Reboot script
+# v0.1.1
+#
+# Copyright 2024-2025 Kyoto University of Eductaion
+# Released under the MIT License
+# https://opensource.org/licenses/MIT
+#
+# Compitable: Ruby 3.0 or higher
+
+require_relative "../lib/update_reboot"
+
+if $0 == __FILE__
+  if Process.euid != 0
+    warn "Only root can run this program."
+    exit(1)
+  end
+
+  opts = YAML.safe_load(DATA, symbolize_names: true)
+  ur = UpdateReboot.new(**opts)
+  result = ur.update_reboot
+
+  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+    warn "waiting a running process..."
+    th.join
+  end
+
+  unless result.success?
+    warn result.status
+    exit 2
+  end
+end
