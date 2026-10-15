@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Runmail
+module Runmail
   class Result
     attr_reader :run, :status, :time, :out, :err, :info
 

@@ -9,9 +9,9 @@
 #
 # Compitable: Ruby 3.3 or higher
 
-require_relative "../runmail"
+require_relative "runmail"
 
-class AnsiblePlaybook < Runmail
+class AnsiblePlaybook < Runmail::Base
   def initialize(ansible_playbook: "ansible-playbook", ansible_dir: Dir.pwd,
       out_omit: [:ok, :skipping], pre: nil, post: nil, **opts)
     super(**opts)

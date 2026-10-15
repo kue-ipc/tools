@@ -9,9 +9,9 @@
 #
 # Compitable: Ruby 3.3 or higher
 
-require_relative "../runmail"
+require_relative "runmail"
 
-class UpdateReboot < Runmail
+class UpdateReboot < Runmail::Base
   def initialize(force_reboot: false, reboot_wait: 10, **opts)
     super(err: :out, **opts)
     @force_reboot = force_reboot

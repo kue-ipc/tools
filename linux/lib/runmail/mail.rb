@@ -4,9 +4,10 @@ require "net/smtp"
 require "etc"
 require "socket"
 
-class Runmail
+module Runmail
   class Mail
     def initialize(from: nil, to: nil, smtp: {}, logger: nil)
+      @hostname = Socket.gethostname
       @from = from || current_user_address
       @to = to || @from
       @smtp = {server: "localhost", port: Net::SMTP.default_port, **smtp}
@@ -14,7 +15,7 @@ class Runmail
     end
 
     private def current_user_address
-      "#{Etc.getlogin}@#{Socket.gethostname}"
+      "#{Etc.getlogin}@#{@hostname}"
     end
 
     def mail(result)
@@ -28,37 +29,36 @@ class Runmail
       @logger&.info "mail - sent to #{@to}"
     end
 
-    private def send_mail(subject, body)
-      @logger.debug "smtp"
+    private def send_mail(message)
+      @logger&.debug "smtp"
       message = message.gsub(/\R/, "\r\n")
-      smtp = Net::SMTP.new(@mail[:smtp][:server] || "localhost",
-        @mail[:smtp][:port] || Net::SMTP.default_port)
+      smtp = Net::SMTP.new(@smtp[:server], @smtp[:port])
 
-      case @mail[:smtp][:starttls]
+      case @smtp[:starttls]
       when "auto", :auto
         smtp.enable_starttls_auto
       when "always", :always, true
         smtp.enable_starttls
       end
-      smtp.enable_tls if @mail[:smtp][:tls]
+      smtp.enable_tls if @smtp[:tls]
 
-      smtp_start_opts = @mail[:smtp].slice(:user, :password, :authtype)
+      smtp_start_opts = @smtp.slice(:user, :password, :authtype)
 
-      @logger.debug "smtp - start"
+      @logger&.debug "smtp - start"
       smtp.start(@hostname, **smtp_start_opts) do
-        @logger.debug "smtp - sned #{message.size} bytes message"
+        @logger&.debug "smtp - sned #{message.size} bytes message"
         smtp.send_message(message, @from, @to)
       end
     end
 
-      private def mail_header(result)
-    <<~MAIL_HEADER
-      From: #{@from}
-      To: #{@to}
-      #{subject(result)}
-      Content-Type: text/plain; charset="UTF-8"
-      Content-Transfer-Encoding: base64
-    MAIL_HEADER
+    private def mail_header(result)
+      <<~MAIL_HEADER
+        From: #{@from}
+        To: #{@to}
+        #{subject(result)}
+        Content-Type: text/plain; charset="UTF-8"
+        Content-Transfer-Encoding: base64
+      MAIL_HEADER
   end
   private def mail_body(result)
     body = String.new
