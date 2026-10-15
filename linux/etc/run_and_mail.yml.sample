@@ -5,6 +5,6 @@ mail:
   smtp:
     server: smtp.example.jp
     starttls: always
-log_file: /var/log/update_reboot.log
+log_file: /var/log/run_and_mail.log
 log_level: debug
 log_age: 2

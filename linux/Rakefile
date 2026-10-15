@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+require "rake"
+require "rake/clean"
+
+CLEAN << "dist"
+
+list = [
+  "run_and_mail",
+  "run_ansible_playbook",
+  "run_update_reboot",
+]
+
+task default: :build
+
+task build: list.map { |name| "dist/#{name}" }
+
+directory "dist"
+
+list.each do |name|
+  file "dist/#{name}" => ["bin/#{name}", "dist"] do |t|
+    sh "ruby combine.rb #{t.source} > #{t.name}"
+  end
+end
