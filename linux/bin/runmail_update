@@ -4,15 +4,18 @@
 # Update & Reboot script
 # v0.1.1
 #
-# Copyright 2024-2025 Kyoto University of Eductaion
+# Copyright 2024-2026 Kyoto University of Eductaion
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
-# Compitable: Ruby 3.0 or higher
+# Compitable: Ruby 3.3 or higher
+
+require "yaml"
 
 require_relative "../lib/update_reboot"
 
 if $0 == __FILE__
+
   if Process.euid != 0
     warn "Only root can run this program."
     exit(1)

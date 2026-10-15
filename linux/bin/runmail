@@ -12,7 +12,7 @@
 
 require "yaml"
 
-require_relative "../lib/run_and_mail"
+require_relative "../lib/runmail"
 
 if $0 == __FILE__
   if ARGV.empty?
@@ -20,12 +20,10 @@ if $0 == __FILE__
     exit 1
   end
 
-  opts = YAML.safe_load_file("#{__dir__}/../etc/run_and_mail.yml", symbolize_names: true)
+  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
 
-  opts[:log_file] = File.expand_path(opts[:log_file], __dir__) if opts[:log_file]
-
-  ram = RunAndMail.new(**opts)
-  result = ram.run_and_mail(*ARGV)
+  runmail = Runmail.new(progname: File.basename($0, '.rb'), **opts)
+  result = runmail.run_and_mail(*ARGV)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
     warn "waiting a running process..."

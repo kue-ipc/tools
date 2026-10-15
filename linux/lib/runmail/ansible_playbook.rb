@@ -7,11 +7,11 @@
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
-# Compitable: Ruby 3.0 or higher
+# Compitable: Ruby 3.3 or higher
 
-require_relative "../lib/run_and_mail"
+require_relative "../runmail"
 
-class AnsiblePlaybook < RunAndMail
+class AnsiblePlaybook < Runmail
   def initialize(ansible_playbook: "ansible-playbook", ansible_dir: Dir.pwd,
       out_omit: [:ok, :skipping], pre: nil, post: nil, **opts)
     super(**opts)

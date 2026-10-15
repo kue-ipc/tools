@@ -7,11 +7,11 @@
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
-# Compitable: Ruby 3.0 or higher
+# Compitable: Ruby 3.3 or higher
 
-require_relative "../lib/run_and_mail"
+require_relative "../runmail"
 
-class UpdateReboot < RunAndMail
+class UpdateReboot < Runmail
   def initialize(force_reboot: false, reboot_wait: 10, **opts)
     super(err: :out, **opts)
     @force_reboot = force_reboot

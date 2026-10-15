@@ -1,0 +1,100 @@
+# frozen_string_literal: true
+
+require "net/smtp"
+require "etc"
+require "socket"
+
+class Runmail
+  class Mail
+    def initialize(from: nil, to: nil, smtp: {}, logger: nil)
+      @from = from || current_user_address
+      @to = to || @from
+      @smtp = {server: "localhost", port: Net::SMTP.default_port, **smtp}
+      @logger = logger
+    end
+
+    private def current_user_address
+      "#{Etc.getlogin}@#{Socket.gethostname}"
+    end
+
+    def mail(result)
+      @logger&.info "mail: #{result.run}"
+      message = String.new
+      message << mail_header(result)
+      message << "\n"
+      message << mail_body(result)
+
+      send_mail(message)
+      @logger&.info "mail - sent to #{@to}"
+    end
+
+    private def send_mail(subject, body)
+      @logger.debug "smtp"
+      message = message.gsub(/\R/, "\r\n")
+      smtp = Net::SMTP.new(@mail[:smtp][:server] || "localhost",
+        @mail[:smtp][:port] || Net::SMTP.default_port)
+
+      case @mail[:smtp][:starttls]
+      when "auto", :auto
+        smtp.enable_starttls_auto
+      when "always", :always, true
+        smtp.enable_starttls
+      end
+      smtp.enable_tls if @mail[:smtp][:tls]
+
+      smtp_start_opts = @mail[:smtp].slice(:user, :password, :authtype)
+
+      @logger.debug "smtp - start"
+      smtp.start(@hostname, **smtp_start_opts) do
+        @logger.debug "smtp - sned #{message.size} bytes message"
+        smtp.send_message(message, @from, @to)
+      end
+    end
+
+      private def mail_header(result)
+    <<~MAIL_HEADER
+      From: #{@from}
+      To: #{@to}
+      #{subject(result)}
+      Content-Type: text/plain; charset="UTF-8"
+      Content-Transfer-Encoding: base64
+    MAIL_HEADER
+  end
+  private def mail_body(result)
+    body = String.new
+    body << info(result)
+    [:out, :err].select do |name|
+      result.public_send(name)&.size&.positive?
+    end.each do |name|
+      body << "\n--- #{name} ---\n"
+      body << result.public_send(name)
+    end
+    Base64.encode64(body.force_encoding(Encoding::UTF_8))
+  end
+  private def subject(result, max_length: 78)
+    hostname = @hostname.split(".", 2).first
+    time = result.first_time || Time.now
+    status = result.status&.to_s&.upcase || "UNKNOWN"
+    info = result.info
+    info = result.run unless info&.size&.positive?
+    header = "Subject: #{@progname} [#{hostname}] " \
+             "#{time.strftime('%Y-%m-%d')} (#{status})"
+    header += " #{info}" if info&.size&.positive?
+    header.delete("^ -~")[0, max_length]
+  end
+
+    private def info(result)
+    <<~INFO
+      #{@progname}
+
+      Hostname: #{@hostname}
+      Run: #{result.run}
+      Status: #{result.status}
+      Time: #{result.time}
+      Info: #{result.info}
+    INFO
+  end
+
+
+  end
+end

@@ -4,11 +4,13 @@
 # Ansible Playbook script
 # v0.1.2
 #
-# Copyright 2023-2025 Kyoto University of Eductaion
+# Copyright 2023-2026 Kyoto University of Eductaion
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
-# Compitable: Ruby 3.0 or higher
+# Compitable: Ruby 3.3 or higher
+
+require "yaml"
 
 require_relative "../lib/ansible_playbook"
 
@@ -49,12 +51,16 @@ if $0 == __FILE__
     end
   end
 
+  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
+  opts[:log_file] ||= "#{opts[:log_dir]}/#{File.basename($0, '.rb')}.log"
+
   opts = YAML.safe_load(DATA, symbolize_names: true)
   if opts[:log_file]
     opts[:log_file] = File.expand_path(opts[:log_file], __dir__)
   end
-  opts[:pre] = pre_playbooks unless pre_playbooks.empty?
-  opts[:post] = post_playbooks unless post_playbooks.empty?
+
+  # opts[:pre] = pre_playbooks unless pre_playbooks.empty?
+  # opts[:post] = post_playbooks unless post_playbooks.empty?
 
   ap = AnsiblePlaybook.new(**opts)
   result = ap.playbook(playbooks, **playbook_opts)
