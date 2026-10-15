@@ -23,7 +23,7 @@ module Runmail
     # log: Hash (see Logger.new)
     def initialize(progname: self.class.name,
         timeout: 3600,
-        stderr: :stdout,
+        stderr: :stderr,
         log: {},
         mail: {})
       @progname = progname

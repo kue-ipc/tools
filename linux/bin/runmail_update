@@ -2,27 +2,26 @@
 # frozen_string_literal: true
 
 # Update & Reboot script
-# v0.1.1
-#
-# Copyright 2024-2026 Kyoto University of Eductaion
-# Released under the MIT License
-# https://opensource.org/licenses/MIT
-#
-# Compitable: Ruby 3.3 or higher
 
 require "yaml"
+require "optparse"
 
 require_relative "../lib/update_reboot"
 
 if $0 == __FILE__
-
   if Process.euid != 0
     warn "Only root can run this program."
-    exit(1)
+    exit 1
   end
 
-  opts = YAML.safe_load(DATA, symbolize_names: true)
-  ur = UpdateReboot.new(**opts)
+  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
+
+  opt = OptionParser.new
+  opt.on("-f", "--force", "force reboot") { opts[:force_reboot] = true }
+  opt.on("-w", "--wait=SECONDS", Integer, "wait seconds before reboot") { |v| opts[:reboot_wait] = v }
+  opt.parse!(ARGV)
+
+  ur = UpdateReboot.new(progname: File.basename($0, '.rb'), **opts)
   result = ur.update_reboot
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|

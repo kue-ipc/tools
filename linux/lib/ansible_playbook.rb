@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # Ansible Playbook
-# v0.1.2
+# v0.2.0
 #
-# Copyright 2023-2025 Kyoto University of Eductaion
+# Copyright 2023-2026 Kyoto University of Eductaion
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #

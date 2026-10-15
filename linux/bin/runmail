@@ -2,13 +2,6 @@
 # frozen_string_literal: true
 
 # Run & mail script
-# v0.1.0
-#
-# Copyright 2026 Kyoto University of Eductaion
-# Released under the MIT License
-# https://opensource.org/licenses/MIT
-#
-# Compitable: Ruby 3.3 or higher
 
 require "yaml"
 

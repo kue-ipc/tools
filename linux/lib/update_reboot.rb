@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # Update & Reboot
-# v0.1.1
+# v0.2.0
 #
-# Copyright 2024-2025 Kyoto University of Eductaion
+# Copyright 2024-2026 Kyoto University of Eductaion
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
@@ -13,11 +13,13 @@ require_relative "runmail"
 
 class UpdateReboot < Runmail::Base
   def initialize(force_reboot: false, reboot_wait: 10, **opts)
-    super(err: :out, **opts)
+    super(stderr: :stdout, **opts)
     @force_reboot = force_reboot
     @reboot_wait = reboot_wait
+  end
 
-    @pkg_manager =
+  private def pkg_mgr
+    @pkg_mgr ||=
       if system("which dnf >/dev/null 2>&1")
         :dnf
       elsif system("which apt >/dev/null 2>&1")
@@ -30,7 +32,7 @@ class UpdateReboot < Runmail::Base
   end
 
   def update_reboot
-    @logger.info "update_reboot"
+    @logger.info { "update_reboot" }
     result = update
     if result.success?
       if !require_reboot
@@ -39,21 +41,21 @@ class UpdateReboot < Runmail::Base
         result << reboot
         result.info_concat("update and reboot +#{@reboot_wait}")
       else
-        @logger.info "reboot at exit"
+        @logger.info { "reboot at exit" }
         at_exit { reboot }
         result.info_concat("update and reboot now")
       end
     end
-    mail(result) if @mail
+    mail(result)
     result
   rescue => e
-    @logger.error e.full_message(highlight: false, order: :top)
+    @logger.error { e.full_message(highlight: false, order: :top) }
     raise
   end
 
   def update
-    @logger.info "update"
-    case @pkg_manager
+    @logger.info { "update" }
+    case pkg_mgr
     in :dnf
       run_cat("dnf upgrade -q -y")
     in :apt
@@ -64,10 +66,10 @@ class UpdateReboot < Runmail::Base
   end
 
   def require_reboot
-    @logger.info "require_reboot"
+    @logger.info { "require_reboot" }
     return true if @force_reboot
 
-    case @pkg_manager
+    case pkg_mgr
     in :dnf
       !system("dnf needs-restarting -r >/dev/null 2>&1")
     in :apt
@@ -81,13 +83,13 @@ class UpdateReboot < Runmail::Base
   end
 
   def reboot
-    @logger.info "reboot"
     time =
       if @reboot_wait.positive?
         "+#{@reboot_wait}"
       else
         "now"
       end
+    @logger.info { "reboot #{time}" }
     run("shutdown -r #{time}")
   end
 end

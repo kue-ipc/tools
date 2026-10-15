@@ -2,13 +2,6 @@
 # frozen_string_literal: true
 
 # Ansible Playbook script
-# v0.1.2
-#
-# Copyright 2023-2026 Kyoto University of Eductaion
-# Released under the MIT License
-# https://opensource.org/licenses/MIT
-#
-# Compitable: Ruby 3.3 or higher
 
 require "yaml"
 
