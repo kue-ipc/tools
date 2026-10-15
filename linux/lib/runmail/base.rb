@@ -35,7 +35,7 @@ module Runmail
         log[:file] ||= "#{dir}/#{@progname}.log"
       end
       @logger = create_logger(**log)
-      @mail = Runmail::Mail.new(**mail, logger: @logger)
+      @mail = Runmail::Mail.new(progname: @progname, logger: @logger, **mail)
     end
 
     def create_logger(file: nil, age: nil, size: nil, level: :debug, progname: @progname)
@@ -48,7 +48,7 @@ module Runmail
       mail(result)
       result
     rescue => e
-      @logger.error e.full_message(highlight: false, order: :top)
+      @logger.error { e.full_message(highlight: false, order: :top) }
       raise
     end
 
@@ -63,13 +63,13 @@ module Runmail
 
     def run(*cmd, **opts)
       result = Result.new(cmd_line(*cmd, **opts))
-      @logger.info("run: #{result.run}")
+      @logger.info { "run: #{result.run}" }
       result.time_update
       out, err, status = run_capture(*cmd, **opts)
       result.time_update
-      @logger.info "run status: #{status_to_s(status)}"
-      @logger.debug "run out: #{out}" if out&.size&.positive?
-      @logger.warn "run err: #{err}" if err&.size&.positive?
+      @logger.info { "run status: #{status_to_s(status)}" }
+      @logger.debug { "run out: #{out.inspect}" } if out&.size&.positive?
+      @logger.warn { "run err: #{err.inspect}" } if err&.size&.positive?
       result.status = status
       result.out_concat(out)
       result.err_concat(err)
@@ -122,10 +122,10 @@ module Runmail
         end
       rescue Timeout::Error
         status = :timeout
-        @logger.error "timeout"
+        @logger.error { "timeout" }
       rescue => e
         status = :error
-        @logger.error e.full_message(highlight: false, order: :top)
+        @logger.error { e.full_message(highlight: false, order: :top) }
         err << e.full_message(highlight: false, order: :top)
       end
       Thread.pass
