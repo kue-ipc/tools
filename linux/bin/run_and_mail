@@ -1,14 +1,16 @@
 #!/usr/bin/ruby
 # frozen_string_literal: true
 
-# Command script
-# v0.0.1
+# Run & mail script
+# v0.1.0
 #
 # Copyright 2026 Kyoto University of Eductaion
 # Released under the MIT License
 # https://opensource.org/licenses/MIT
 #
-# Compitable: Ruby 3.0 or higher
+# Compitable: Ruby 3.3 or higher
+
+require "yaml"
 
 require_relative "../lib/run_and_mail"
 
@@ -18,7 +20,8 @@ if $0 == __FILE__
     exit 1
   end
 
-  opts = YAML.safe_load(DATA, symbolize_names: true)
+  opts = YAML.safe_load_file("#{__dir__}/../etc/run_and_mail.yml", symbolize_names: true)
+
   opts[:log_file] = File.expand_path(opts[:log_file], __dir__) if opts[:log_file]
 
   ram = RunAndMail.new(**opts)

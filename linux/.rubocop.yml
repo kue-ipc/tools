@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.3
   NewCops: enable
 
 Layout/ArgumentAlignment:
@@ -9,7 +9,7 @@ Layout/EndOfLine:
 Layout/FirstHashElementIndentation:
   EnforcedStyle: consistent
 Layout/LineLength:
-  Max: 80
+  Max: 120
 Layout/MultilineMethodCallBraceLayout:
   EnforcedStyle: same_line
 Layout/MultilineMethodCallIndentation:
