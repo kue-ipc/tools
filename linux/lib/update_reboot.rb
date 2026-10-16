@@ -12,45 +12,31 @@
 require_relative "runmail"
 
 class UpdateReboot < Runmail::Base
-  def initialize(force_reboot: false, reboot_wait: 10, **opts)
-    super(stderr: :stdout, **opts)
-    @force_reboot = force_reboot
-    @reboot_wait = reboot_wait
+  def runmail_update_reboot(**)
+    result = update_reboot(**)
+    mail(result)
+    result
+  rescue => e
+    @logger&.error { e.full_message(highlight: false, order: :top) }
+    raise
   end
 
-  private def pkg_mgr
-    @pkg_mgr ||=
-      if system("which dnf >/dev/null 2>&1")
-        :dnf
-      elsif system("which apt >/dev/null 2>&1")
-        :apt
-      elsif system("which pacman >/dev/null 2>&1")
-        :pacman
-      else
-        raise "No supported package manager was found."
-      end
-  end
-
-  def update_reboot
+  def update_reboot(force_reboot: false, reboot_wait: 10)
     @logger&.info { "update_reboot" }
     result = update
     if result.success?
-      if !require_reboot
+      if !force_reboot && !require_reboot
         result.info_concat("update only")
-      elsif @reboot_wait.positive?
-        result << reboot
-        result.info_concat("update and reboot +#{@reboot_wait}")
+      elsif reboot_wait.positive?
+        result << reboot(reboot_wait)
+        result.info_concat("update and reboot +#{reboot_wait}")
       else
         @logger&.info { "reboot at exit" }
         at_exit { reboot }
         result.info_concat("update and reboot now")
       end
     end
-    mail(result)
     result
-  rescue => e
-    @logger&.error { e.full_message(highlight: false, order: :top) }
-    raise
   end
 
   def update
@@ -67,8 +53,6 @@ class UpdateReboot < Runmail::Base
 
   def require_reboot
     @logger&.info { "require_reboot" }
-    return true if @force_reboot
-
     case pkg_mgr
     in :dnf
       !system("dnf needs-restarting -r >/dev/null 2>&1")
@@ -82,14 +66,27 @@ class UpdateReboot < Runmail::Base
     end
   end
 
-  def reboot
+  def reboot(wait = 0)
     time =
-      if @reboot_wait.positive?
-        "+#{@reboot_wait}"
+      if wait.positive?
+        "+#{wait}"
       else
         "now"
       end
     @logger&.info { "reboot #{time}" }
     run("shutdown -r #{time}")
+  end
+
+  private def pkg_mgr
+    @pkg_mgr ||=
+      if system("which dnf >/dev/null 2>&1")
+        :dnf
+      elsif system("which apt >/dev/null 2>&1")
+        :apt
+      elsif system("which pacman >/dev/null 2>&1")
+        :pacman
+      else
+        raise "No supported package manager was found."
+      end
   end
 end

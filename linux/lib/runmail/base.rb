@@ -47,7 +47,7 @@ module Runmail
       Logger.new(file || $stdout, age || 0, size || 1048576, level:, progname:)
     end
 
-    def run_and_mail(*cmd)
+    def runmail(*cmd)
       result = run(*cmd)
       mail(result)
       result
@@ -72,8 +72,8 @@ module Runmail
       out, err, status = run_capture(*cmd, **opts)
       result.time_update
       @logger&.info { "run status: #{status_to_s(status)}" }
-      @logger&.debug { "run out: #{out.inspect}" } if out&.size&.positive?
-      @logger&.warn { "run err: #{err.inspect}" } if err&.size&.positive?
+      @logger&.debug { "run out: #{out.dup.force_encoding("UTF-8").inspect}" } if out&.size&.positive?
+      @logger&.warn { "run err: #{err.dup.force_encoding("UTF-8").inspect}" } if err&.size&.positive?
       result.status = status
       result.out_concat(out)
       result.err_concat(err)

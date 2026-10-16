@@ -24,17 +24,13 @@ if $0 == __FILE__
     puts opt
     exit
   end
+
   begin
     opt.parse!(ARGV)
   rescue OptionParser::InvalidOption => e
     warn e.message
     warn opt
     exit 8
-  end
-
-  if ARGV.empty?
-    warn opt
-    exit 9
   end
 
   yaml_opts = {symbolize_names: true}
@@ -50,7 +46,7 @@ if $0 == __FILE__
     end
   unless config.is_a?(Hash)
     warn "Invalid config: #{config.inspect}"
-    exit 10
+    exit 9
   end
 
   config[:progname] ||= opt.program_name
@@ -60,7 +56,14 @@ if $0 == __FILE__
   config[:log] = nil if opt_conifg[:no_log]
 
   runmail = Runmail.new(**config)
-  result = runmail.run_and_mail(*ARGV)
+
+  if ARGV.empty?
+    warn "Required command and arguments"
+    warn opt
+    exit 16
+  end
+
+  result = runmail.runmail(*ARGV)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
     warn "waiting a running process..."
