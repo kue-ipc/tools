@@ -5,20 +5,30 @@ require "rake/clean"
 
 CLEAN << "dist"
 
+install_dir = "/usr/local/bin"
+
 list = [
   "runmail",
-  # "runmail_playbook",
-  # "runmail_update",
+  "runmail_playbook",
+  "runmail_update",
 ]
 
 task default: :build
 
 task build: list.map { |name| "dist/#{name}" }
 
+task install: list.map { |name| "#{install_dir}/#{name}" }
+
 directory "dist"
 
 list.each do |name|
   file "dist/#{name}" => ["bin/#{name}", "dist"] do |t|
     sh "ruby combine.rb #{t.source} > #{t.name}"
+    chmod 0o755, t.name
+  end
+
+  file "#{install_dir}/#{name}" => ["dist/#{name}"] do |t|
+    cp t.source, t.name
+    chmod 0o755, t.name
   end
 end
