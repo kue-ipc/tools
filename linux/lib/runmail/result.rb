@@ -100,11 +100,11 @@ module Runmail
     end
 
     def out_omit(pattern)
-      omitted_out = String.new
-      @out.each_line do |line|
-        omitted_out << line if line !~ pattern
-      end
-      @out = omitted_out
+      @out.gsub!(pattern, "")
+    end
+
+    def err_omit(pattern)
+      @err.gsub!(pattern, "")
     end
   end
 end

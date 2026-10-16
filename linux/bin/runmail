@@ -11,6 +11,7 @@ require_relative "../lib/runmail"
 DATA_FILE = "#{__dir__}/../etc/runmail.yml"
 
 if $0 == __FILE__
+  run_config = {}
   opt_conifg = {}
 
   opt = OptionParser.new
@@ -24,6 +25,8 @@ if $0 == __FILE__
     puts opt
     exit
   end
+  # runmail specific options
+  opt.on("-d", "--dir=DIR", "working directory") { |v| run_config[:chdir] = v }
 
   begin
     opt.parse!(ARGV)

@@ -47,8 +47,8 @@ module Runmail
       Logger.new(file || $stdout, age || 0, size || 1048576, level:, progname:)
     end
 
-    def runmail(*cmd)
-      result = run(*cmd)
+    def runmail(...)
+      result = run(...)
       mail(result)
       result
     rescue => e

@@ -12,8 +12,8 @@
 require_relative "runmail"
 
 class UpdateReboot < Runmail::Base
-  def runmail_update_reboot(**)
-    result = update_reboot(**)
+  def runmail_update_reboot(...)
+    result = update_reboot(...)
     mail(result)
     result
   rescue => e
@@ -21,33 +21,33 @@ class UpdateReboot < Runmail::Base
     raise
   end
 
-  def update_reboot(force_reboot: false, reboot_wait: 10)
+  def update_reboot(force_reboot: false, reboot_wait: 10, **opts)
     @logger&.info { "update_reboot" }
-    result = update
+    result = update(**opts)
     if result.success?
       if !force_reboot && !require_reboot
         result.info_concat("update only")
       elsif reboot_wait.positive?
-        result << reboot(reboot_wait)
+        result << reboot(reboot_wait, **opts)
         result.info_concat("update and reboot +#{reboot_wait}")
       else
         @logger&.info { "reboot at exit" }
-        at_exit { reboot }
+        at_exit { reboot(**opts) }
         result.info_concat("update and reboot now")
       end
     end
     result
   end
 
-  def update
+  def update(**opts)
     @logger&.info { "update" }
     case pkg_mgr
     in :dnf
-      run_cat("dnf upgrade -q -y")
+      run_cat("dnf upgrade -q -y", **opts)
     in :apt
-      run_cat("apt update -q", "apt upgrade -q -y")
+      run_cat("apt update -q", "apt upgrade -q -y", **opts)
     in :pacman
-      run_cat("pacman -Syuq --noconfirm")
+      run_cat("pacman -Syuq --noconfirm", **opts)
     end
   end
 
@@ -66,7 +66,7 @@ class UpdateReboot < Runmail::Base
     end
   end
 
-  def reboot(wait = 0)
+  def reboot(wait = 0, **opts)
     time =
       if wait.positive?
         "+#{wait}"
@@ -74,7 +74,7 @@ class UpdateReboot < Runmail::Base
         "now"
       end
     @logger&.info { "reboot #{time}" }
-    run("shutdown -r #{time}")
+    run("shutdown -r #{time}", **opts)
   end
 
   private def pkg_mgr
