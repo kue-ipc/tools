@@ -41,10 +41,11 @@ class AnsiblePlaybook < Runmail::Base
     json: [],
   }
 
-  # TODO: support json format output
-  #   set {"ANSIBLE_STDOUT_CALLBACK" => "json"} on first arg and parse output
   def ansible_playbook(*playbooks, check: false, limit: nil, extra_vars: [], out: :normal, **opts)
     cmd = create_cmd(*playbooks, check:, limit:, extra_vars:)
+    if out == :json
+      cmd = [{"ANSIBLE_STDOUT_CALLBACK" => "json"}, *cmd]
+    end
     result = run(*cmd, **opts)
     result.info_concat(playbooks.join(" "))
     result.info_concat(" (C)") if check
