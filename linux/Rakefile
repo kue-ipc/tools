@@ -6,9 +6,9 @@ require "rake/clean"
 CLEAN << "dist"
 
 list = [
-  "run_and_mail",
-  "run_ansible_playbook",
-  "run_update_reboot",
+  "runmail",
+  # "runmail_playbook",
+  # "runmail_update",
 ]
 
 task default: :build

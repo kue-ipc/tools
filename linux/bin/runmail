@@ -3,19 +3,54 @@
 
 # Run & mail script
 
+require "optparse"
 require "yaml"
 
 require_relative "../lib/runmail"
 
+DATA_FILE = "#{__dir__}/../etc/runmail.yml"
+
 if $0 == __FILE__
-  if ARGV.empty?
-    warn "Usage: #{$0} [command and argments...]"
+  opt_conifg = {}
+
+  opt = OptionParser.new
+  opt.banner += " [--] command [arguments]"
+  opt.on("-c", "--config=CONFIG", "config file") { |v| opt_conifg[:config] = v }
+  opt.on("-n", "--dry-run", "dry run") { opt_conifg[:dry_run] = true }
+  opt.on("--no-mail", "no mail") { opt_conifg[:no_mail] = true }
+  opt.on("--no-log", "no log") { opt_conifg[:no_log] = true }
+  opt.on_tail("-h", "--help", "show this help message") do
+    puts opt
+    exit
+  end
+  opt.parse!(ARGV)
+  cmd = ARGV.map(&:to_s)
+
+  if cmd.empty?
+    warn opt
     exit 1
   end
 
-  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
+  yaml_opts = {symbolize_names: true}
+  config =
+    if opt_conifg[:config]
+      YAML.safe_load_file(opt_conifg[:config], **yaml_opts)
+    elsif File.exist?(DATA_FILE)
+      YAML.safe_load_file(DATA_FILE, **yaml_opts)
+    elsif defined?(DATA)
+      YAML.safe_load(DATA, **yaml_opts)
+    else
+      {} # empty config
+    end
+  unless config.is_a?(Hash)
+    warn "Invalid config: #{config.inspect}"
+    exit 2
+  end
 
-  runmail = Runmail.new(progname: File.basename($0, '.rb'), **opts)
+  config[:mail] = nil   if opt_conifg[:no_mail]
+  config[:log] = nil   if opt_conifg[:no_log]
+
+  runmail = Runmail.new(progname: File.basename($0, '.rb'), **config)
   result = runmail.run_and_mail(*ARGV)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|

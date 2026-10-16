@@ -9,20 +9,26 @@ require "optparse"
 require_relative "../lib/update_reboot"
 
 if $0 == __FILE__
+  config = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
+
+  update_reboot_config ={}
+
+  opt = OptionParser.new
+  opt.on("-f", "--force", "force reboot") { update_reboot_config[:force_reboot] = true }
+  opt.on("-w", "--wait=SECONDS", Integer, "wait seconds before reboot") { |v| update_reboot_config[:reboot_wait] = v }
+  opt.on_tail("-h", "--help", "show this help message") do
+    puts opt
+    exit
+  end
+  opt.parse!(ARGV)
+
   if Process.euid != 0
     warn "Only root can run this program."
     exit 1
   end
 
-  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
-
-  opt = OptionParser.new
-  opt.on("-f", "--force", "force reboot") { opts[:force_reboot] = true }
-  opt.on("-w", "--wait=SECONDS", Integer, "wait seconds before reboot") { |v| opts[:reboot_wait] = v }
-  opt.parse!(ARGV)
-
-  ur = UpdateReboot.new(progname: File.basename($0, '.rb'), **opts)
-  result = ur.update_reboot
+  ur = UpdateReboot.new(progname: File.basename($0, '.rb'), **config)
+  result = ur.update_reboot(**update_reboot_config)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
     warn "waiting a running process..."

@@ -4,8 +4,7 @@
 
 require "yaml"
 
-def combine(path, list)
-  data = {}
+def combine(path, list, data = nil)
   list << path
   warn "combine #{path}"
   script = File.read(path)
@@ -18,25 +17,40 @@ def combine(path, list)
       end
 
       require_path = File.expand_path(m[3], File.dirname(path))
-      require_path += ".rb" unless File.exist?(require_path) || require_path.end_with?(".rb")
+      require_path += ".rb" unless require_path.end_with?(".rb")
       unless list.include?(require_path)
         print "# --- begin --- #{line}"
-        data.merge!(combine(require_path, list))
+        data = combine(require_path, list, data)
         print "# --- end --- #{line}"
       end
-    when /\bYAML\.safe_load_file\b/
-      m = /\bYAML\.safe_load_file\(\s*"([^"]+)"/.match(line)
-      unless m
-        raise "Invalid YAML.safe_load_file line: (#{path}:#{index + 1}) #{line}"
+    when /\bDATA_FILE\s*=(?!=)/
+      if data
+        raise "Multiple DATA_FILE lines: (#{path}:#{index + 1}) #{line}"
       end
 
-      yaml_path = m[1]
-        .sub(/\#\{\s*__dir__\s*\}/, File.dirname(path))
-        .sub(/\#\{\s*__FILE__\s*\}/, path)
-      yaml_path = File.expand_path(yaml_path)
-      warn "yaml #{yaml_path}"
-      data.merge!(YAML.safe_load_file(yaml_path))
-      print line.sub(/\bYAML\.safe_load_file\(\s*"([^"]+)"/, "YAML.safe_load(DATA")
+      m = /\bDATA_FILE\s*=\s*"((?:[^"]|\#\{[^}]+\})+)"/.match(line)
+      unless m
+        raise "Invalid DATA_FILE line: (#{path}:#{index + 1}) #{line}"
+      end
+
+      data_file = m[1].dup
+      [
+        [/\#\{\s*__dir__\s*\}/, File.dirname(path)],
+        [/\#\{\s*__FILE__\s*\}/, path],
+        [/\#\{\s*File.basename\s*\(\s*__FILE__\s*\)\s*\}/, File.basename(path)],
+        [/\#\{\s*File.basename\s*\(\s*__FILE__\s*,\s*"\.\*"\s*\)\s*\}/, File.basename(path, ".*")],
+      ].each do |pattern, replacement|
+        data_file.gsub!(pattern, replacement)
+      end
+      if data_file.include?("\#{")
+        raise "Unconvertable DATA_FILE line: (#{path}:#{index + 1}) #{line}"
+      end
+
+      if File.exist?(data_file)
+        warn "read #{data_file}"
+        data = File.read(data_file)
+      end
+      print line
     else
       print line
     end
@@ -51,6 +65,8 @@ if $0 == __FILE__
   end
 
   data = combine(File.expand_path(ARGV.first), [])
-  puts "__END__"
-  YAML.safe_dump(data, $stdout)
+  if data
+    puts "__END__"
+    print data
+  end
 end

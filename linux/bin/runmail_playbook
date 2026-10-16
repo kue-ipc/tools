@@ -4,17 +4,14 @@
 # Ansible Playbook script
 
 require "yaml"
+require "optparse"
 
 require_relative "../lib/ansible_playbook"
 
 if $0 == __FILE__
-  if ARGV.empty?
-    warn "Usage: #{$0} [ansible-playbook's argments...]"
-    exit 1
-  end
+  config = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
 
-  playbooks = []
-  playbook_opts = {
+  playbook_config = {
     check: false,
     limit: nil,
     extra_vars: [],
@@ -22,41 +19,34 @@ if $0 == __FILE__
   pre_playbooks = []
   post_playbooks = []
 
-  while (arg = ARGV.shift)
-    if arg.start_with?("-")
-      case arg
-      in "-C" | "--check"
-        playbook_opts[:check] = true
-      in "-l" | "--limit"
-        playbook_opts[:limit] = ARGV.shift
-      in "-e" | "--extra-vars"
-        playbook_opts[:extra_vars] << ARGV.shift
-      in "-p" | "--pre"
-        pre_playbooks << ARGV.shift
-      in "-P" | "--post"
-        post_playbooks << ARGV.shift
-      in "-h" | "--help"
-        warn "Usage: #{$0} [ansible-playbook's argments...]"
-        exit 1
-      end
-    else
-      playbooks << arg
-    end
+  opt = OptionParser.new
+  opt.banner += " PYAYBOOKS..."
+  opt.on("-C", "--check", "check mode") { playbook_config[:check] = true }
+  opt.on("-l", "--limit=LIMIT", "limit hosts") { |v| playbook_config[:limit] = v }
+  opt.on("-e", "--extra-vars=EXTRA_VARS", "extra vars") { |v| playbook_config[:extra_vars] << v }
+  opt.on("-p", "--pre=PRE_PLAYBOOK", "pre playbook") { |v| pre_playbooks << v }
+  opt.on("-P", "--post=POST_PLAYBOOK", "post playbook") { |v| post_playbooks << v }
+  opt.on_tail("-h", "--help", "show this help message") do
+    puts opt
+    exit
+  end
+  opt.parse!(ARGV)
+  playbooks = ARGV.map(&:to_s)
+
+  pp config
+  pp playbook_config
+  pp playbooks
+  exit
+
+  if playbooks.empty?
+    warn opt
+    exit 1
   end
 
-  opts = YAML.safe_load_file("#{__dir__}/../etc/runmail.yml", symbolize_names: true)
-  opts[:log_file] ||= "#{opts[:log_dir]}/#{File.basename($0, '.rb')}.log"
+  config = YAML.safe_load(DATA, symbolize_names: true)
 
-  opts = YAML.safe_load(DATA, symbolize_names: true)
-  if opts[:log_file]
-    opts[:log_file] = File.expand_path(opts[:log_file], __dir__)
-  end
-
-  # opts[:pre] = pre_playbooks unless pre_playbooks.empty?
-  # opts[:post] = post_playbooks unless post_playbooks.empty?
-
-  ap = AnsiblePlaybook.new(**opts)
-  result = ap.playbook(playbooks, **playbook_opts)
+  ap = AnsiblePlaybook.new(**config)
+  result = ap.playbook(playbooks, **playbook_config)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
     warn "waiting a running process..."
