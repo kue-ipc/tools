@@ -1,10 +1,24 @@
 ---
-mail:
-  from: no-reply@example.jp
-  to: admin@example.jp
-  smtp:
-    server: smtp.example.jp
-    starttls: always
-log_file: /var/log/run_and_mail.log
-log_level: debug
-log_age: 2
+
+---
+# progname: <script file name>
+# timeaut: 3600
+# stderr: stderr
+# dry_run: false
+# quiet: false
+# mail:
+#   from: no-reply@example.jp
+#   to: admin@example.jp
+#   smtp:
+#     server: smtp.example.jp
+#     port: 25
+#     starttls: false
+#     user:
+#     password:
+#     authtype: plain
+# log:
+#   dir: /var/log/runmail
+#   file: /var/log/runmail/runmail.log
+#   level: debug
+#   age: 0
+#   size: 1048576

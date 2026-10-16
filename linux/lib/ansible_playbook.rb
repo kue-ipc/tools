@@ -41,7 +41,7 @@ class AnsiblePlaybook < Runmail::Base
     mail(result)
     result
   rescue => e
-    @logger.error e.full_message(highlight: false, order: :top)
+    @logger&.error e.full_message(highlight: false, order: :top)
     raise
   end
 

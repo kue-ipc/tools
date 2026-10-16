@@ -24,23 +24,27 @@ module Runmail
     def initialize(progname: self.class.name,
         timeout: 3600,
         stderr: :stderr,
+        dry_run: false,
+        quiet: false,
         log: {},
         mail: {})
       @progname = progname
       @timeout = timeout
       @stderr = stderr&.to_sym || :null
 
+      @dry_run = dry_run
+      @quiet = quiet
+
       log = log.dup
-      log.delete(:dir)&.tap do |dir|
+      log&.delete(:dir)&.tap do |dir|
         log[:file] ||= "#{dir}/#{@progname}.log"
       end
-      @logger = create_logger(**log)
-      @mail = Runmail::Mail.new(progname: @progname, logger: @logger, **mail)
+      @logger = log && create_logger(**log)
+      @mail = mail && Runmail::Mail.new(progname: @progname, logger: @logger, **mail)
     end
 
     def create_logger(file: nil, age: nil, size: nil, level: :debug, progname: @progname)
-      Logger.new(file || $stdout, age || 0, size || 1048576,
-        level: level, progname: @progname)
+      Logger.new(file || $stdout, age || 0, size || 1048576, level:, progname:)
     end
 
     def run_and_mail(*cmd)
@@ -48,7 +52,7 @@ module Runmail
       mail(result)
       result
     rescue => e
-      @logger.error { e.full_message(highlight: false, order: :top) }
+      @logger&.error { e.full_message(highlight: false, order: :top) }
       raise
     end
 
@@ -62,14 +66,14 @@ module Runmail
     end
 
     def run(*cmd, **opts)
-      result = Result.new(cmd_line(*cmd, **opts))
-      @logger.info { "run: #{result.run}" }
+      result = Result.new(cmd_line(*cmd))
+      @logger&.info { "run: #{result.run}" }
       result.time_update
       out, err, status = run_capture(*cmd, **opts)
       result.time_update
-      @logger.info { "run status: #{status_to_s(status)}" }
-      @logger.debug { "run out: #{out.inspect}" } if out&.size&.positive?
-      @logger.warn { "run err: #{err.inspect}" } if err&.size&.positive?
+      @logger&.info { "run status: #{status_to_s(status)}" }
+      @logger&.debug { "run out: #{out.inspect}" } if out&.size&.positive?
+      @logger&.warn { "run err: #{err.inspect}" } if err&.size&.positive?
       result.status = status
       result.out_concat(out)
       result.err_concat(err)
@@ -92,18 +96,17 @@ module Runmail
     end
 
     def mail(result)
-      @mail.mail(result)
+      @mail&.mail(result)
     end
 
     # see Kernel.#spawn parameters
-    def cmd_line(*cmd, **_opts)
+    def cmd_line(*cmd)
       cmd.shift if cmd.first.is_a?(Hash)
       cmd[0] = cmd[0].first if cmd.first.is_a?(Array)
       cmd.join(" ")
     end
 
-    private def run_capture(*cmd, timeout: @timeout, stdin_data: nil, binmode: false,
-        **opts)
+    private def run_capture(*cmd, timeout: @timeout, stdin_data: nil, binmode: false, **opts)
       out = String.new
       err = String.new
       status = nil
@@ -112,8 +115,8 @@ module Runmail
           stdin, stdout, stderr, wait_thr = run_popen(*cmd, **opts)
           [stdin, stdout, stderr].compact.each(&:binmode) if binmode
           readers = [
-            copy_partial_thread(stdout, out),
-            copy_partial_thread(stderr, err),
+            copy_partial_thread(stdout, [out, @quiet ? nil : $stdout].compact),
+            copy_partial_thread(stderr, [err, @quiet ? nil : $stderr].compact),
           ]
           stdin.write stdin_data if stdin_data&.size&.positive?
           stdin.close
@@ -122,10 +125,10 @@ module Runmail
         end
       rescue Timeout::Error
         status = :timeout
-        @logger.error { "timeout" }
+        @logger&.error { "timeout" }
       rescue => e
         status = :error
-        @logger.error { e.full_message(highlight: false, order: :top) }
+        @logger&.error { e.full_message(highlight: false, order: :top) }
         err << e.full_message(highlight: false, order: :top)
       end
       Thread.pass
@@ -133,6 +136,11 @@ module Runmail
     end
 
     private def run_popen(*cmd, stderr: @stderr, **opts)
+      if @dry_run
+        @logger&.info { "dry_run: #{cmd_line(*cmd)}" }
+        return [StringIO.new, StringIO.new, StringIO.new, Thread.new { :noop }]
+      end
+
       case stderr
       in :stderr
         Open3.popen3(*cmd, **opts)
@@ -149,10 +157,13 @@ module Runmail
 
     private def copy_partial_thread(src, dst, maxlen: 4096)
       return if src.nil? || src.closed?
+      dst = [dst] unless dst.is_a?(Array)
 
       Thread.new do
         loop do
-          dst << src.readpartial(maxlen)
+          src.readpartial(maxlen).then do |data|
+            dst.each { |d| d << data }
+          end
         rescue EOFError
           break
         end

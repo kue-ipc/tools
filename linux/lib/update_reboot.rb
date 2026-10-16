@@ -32,7 +32,7 @@ class UpdateReboot < Runmail::Base
   end
 
   def update_reboot
-    @logger.info { "update_reboot" }
+    @logger&.info { "update_reboot" }
     result = update
     if result.success?
       if !require_reboot
@@ -41,7 +41,7 @@ class UpdateReboot < Runmail::Base
         result << reboot
         result.info_concat("update and reboot +#{@reboot_wait}")
       else
-        @logger.info { "reboot at exit" }
+        @logger&.info { "reboot at exit" }
         at_exit { reboot }
         result.info_concat("update and reboot now")
       end
@@ -49,12 +49,12 @@ class UpdateReboot < Runmail::Base
     mail(result)
     result
   rescue => e
-    @logger.error { e.full_message(highlight: false, order: :top) }
+    @logger&.error { e.full_message(highlight: false, order: :top) }
     raise
   end
 
   def update
-    @logger.info { "update" }
+    @logger&.info { "update" }
     case pkg_mgr
     in :dnf
       run_cat("dnf upgrade -q -y")
@@ -66,7 +66,7 @@ class UpdateReboot < Runmail::Base
   end
 
   def require_reboot
-    @logger.info { "require_reboot" }
+    @logger&.info { "require_reboot" }
     return true if @force_reboot
 
     case pkg_mgr
@@ -89,7 +89,7 @@ class UpdateReboot < Runmail::Base
       else
         "now"
       end
-    @logger.info { "reboot #{time}" }
+    @logger&.info { "reboot #{time}" }
     run("shutdown -r #{time}")
   end
 end

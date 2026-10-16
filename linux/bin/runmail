@@ -17,18 +17,24 @@ if $0 == __FILE__
   opt.banner += " [--] command [arguments]"
   opt.on("-c", "--config=CONFIG", "config file") { |v| opt_conifg[:config] = v }
   opt.on("-n", "--dry-run", "dry run") { opt_conifg[:dry_run] = true }
+  opt.on("-q", "--quiet", "quiet") { opt_conifg[:quiet] = true }
   opt.on("--no-mail", "no mail") { opt_conifg[:no_mail] = true }
   opt.on("--no-log", "no log") { opt_conifg[:no_log] = true }
   opt.on_tail("-h", "--help", "show this help message") do
     puts opt
     exit
   end
-  opt.parse!(ARGV)
-  cmd = ARGV.map(&:to_s)
-
-  if cmd.empty?
+  begin
+    opt.parse!(ARGV)
+  rescue OptionParser::InvalidOption => e
+    warn e.message
     warn opt
-    exit 1
+    exit 8
+  end
+
+  if ARGV.empty?
+    warn opt
+    exit 9
   end
 
   yaml_opts = {symbolize_names: true}
@@ -44,13 +50,16 @@ if $0 == __FILE__
     end
   unless config.is_a?(Hash)
     warn "Invalid config: #{config.inspect}"
-    exit 2
+    exit 10
   end
 
-  config[:mail] = nil   if opt_conifg[:no_mail]
-  config[:log] = nil   if opt_conifg[:no_log]
+  config[:progname] ||= opt.program_name
+  config[:dry_run] = true if opt_conifg[:dry_run]
+  config[:quiet] = true if opt_conifg[:quiet]
+  config[:mail] = nil if opt_conifg[:no_mail]
+  config[:log] = nil if opt_conifg[:no_log]
 
-  runmail = Runmail.new(progname: File.basename($0, '.rb'), **config)
+  runmail = Runmail.new(**config)
   result = runmail.run_and_mail(*ARGV)
 
   Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
@@ -59,7 +68,6 @@ if $0 == __FILE__
   end
 
   unless result.success?
-    warn result.status
-    exit 2
+    exit 1
   end
 end
