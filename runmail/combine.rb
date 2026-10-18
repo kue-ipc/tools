@@ -12,9 +12,7 @@ def combine(path, list, data = nil)
     case line
     when /\brequire_relative\b/
       m = /^\s*require_relative\s*(\()?\s*(["'])([^"']+)\2\s*(?(1)\))\s*$/.match(line)
-      unless m
-        raise "Invalid require_relative line: (#{path}:#{index + 1}) #{line}"
-      end
+      raise "Invalid require_relative line: (#{path}:#{index + 1}) #{line}" unless m
 
       require_path = File.expand_path(m[3], File.dirname(path))
       require_path += ".rb" unless require_path.end_with?(".rb")
@@ -24,14 +22,10 @@ def combine(path, list, data = nil)
         print "# --- end --- #{line}"
       end
     when /\bDATA_FILE\s*=(?!=)/
-      if data
-        raise "Multiple DATA_FILE lines: (#{path}:#{index + 1}) #{line}"
-      end
+      raise "Multiple DATA_FILE lines: (#{path}:#{index + 1}) #{line}" if data
 
       m = /\bDATA_FILE\s*=\s*"((?:[^"]|\#\{[^}]+\})+)"/.match(line)
-      unless m
-        raise "Invalid DATA_FILE line: (#{path}:#{index + 1}) #{line}"
-      end
+      raise "Invalid DATA_FILE line: (#{path}:#{index + 1}) #{line}" unless m
 
       data_file = m[1].dup
       [
@@ -42,9 +36,7 @@ def combine(path, list, data = nil)
       ].each do |pattern, replacement|
         data_file.gsub!(pattern, replacement)
       end
-      if data_file.include?("\#{")
-        raise "Unconvertable DATA_FILE line: (#{path}:#{index + 1}) #{line}"
-      end
+      raise "Unconvertable DATA_FILE line: (#{path}:#{index + 1}) #{line}" if data_file.include?("\#{")
 
       if File.exist?(data_file)
         warn "read #{data_file}"

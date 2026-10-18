@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
 # frozen_string_literal: true
+# shareable_constant_value: literal
 
 # Ansible Playbook script
 
@@ -74,12 +75,10 @@ if $0 == __FILE__
 
   result = ansible_playbook.runmail_ansible_playbook(*ARGV, **ansible_playbook_config)
 
-  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+  Thread.list.grep(Process::Waiter).each do |th|
     warn "waiting a running process..."
     th.join
   end
 
-  unless result.success?
-    exit 1
-  end
+  exit 1 unless result.success?
 end

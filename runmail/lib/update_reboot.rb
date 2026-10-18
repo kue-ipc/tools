@@ -39,15 +39,15 @@ class UpdateReboot < Runmail::Base
     result
   end
 
-  def update(**opts)
+  def update(**)
     @logger&.info { "update" }
     case pkg_mgr
     in :dnf
-      run_cat("dnf upgrade -q -y", **opts)
+      run_cat("dnf upgrade -q -y", **)
     in :apt
-      run_cat("apt update -q", "apt upgrade -q -y", **opts)
+      run_cat("apt update -q", "apt upgrade -q -y", **)
     in :pacman
-      run_cat("pacman -Syuq --noconfirm", **opts)
+      run_cat("pacman -Syuq --noconfirm", **)
     end
   end
 
@@ -66,7 +66,7 @@ class UpdateReboot < Runmail::Base
     end
   end
 
-  def reboot(wait = 0, **opts)
+  def reboot(wait = 0, **)
     time =
       if wait.positive?
         "+#{wait}"
@@ -74,7 +74,7 @@ class UpdateReboot < Runmail::Base
         "now"
       end
     @logger&.info { "reboot #{time}" }
-    run("shutdown -r #{time}", **opts)
+    run("shutdown -r #{time}", **)
   end
 
   private def pkg_mgr

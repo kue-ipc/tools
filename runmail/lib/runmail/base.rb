@@ -65,15 +65,15 @@ module Runmail
       result
     end
 
-    def run(*cmd, **opts)
+    def run(*cmd, **)
       result = Result.new(cmd_line(*cmd))
       @logger&.info { "run: #{result.run}" }
       result.time_update
-      out, err, status = run_capture(*cmd, **opts)
+      out, err, status = run_capture(*cmd, **)
       result.time_update
       @logger&.info { "run status: #{status_to_s(status)}" }
-      @logger&.debug { "run out: #{out.dup.force_encoding("UTF-8").inspect}" } if out&.size&.positive?
-      @logger&.warn { "run err: #{err.dup.force_encoding("UTF-8").inspect}" } if err&.size&.positive?
+      @logger&.debug { "run out: #{out.dup.force_encoding('UTF-8').inspect}" } if out&.size&.positive?
+      @logger&.warn { "run err: #{err.dup.force_encoding('UTF-8').inspect}" } if err&.size&.positive?
       result.status = status
       result.out_concat(out)
       result.err_concat(err)
@@ -135,7 +135,7 @@ module Runmail
       [out, err, status]
     end
 
-    private def run_popen(*cmd, stderr: @stderr, **opts)
+    private def run_popen(*cmd, stderr: @stderr, **)
       if @dry_run
         @logger&.info { "dry_run: #{cmd_line(*cmd)}" }
         return [StringIO.new, StringIO.new, StringIO.new, Thread.new { :noop }]
@@ -143,13 +143,13 @@ module Runmail
 
       case stderr
       in :stderr
-        Open3.popen3(*cmd, **opts)
+        Open3.popen3(*cmd, **)
       in :stdout
-        stdin, stdout, wait_thr = Open3.popen2e(*cmd, **opts)
+        stdin, stdout, wait_thr = Open3.popen2e(*cmd, **)
         stderr = nil
         [stdin, stdout, stderr, wait_thr]
       in :null | nil
-        stdin, stdout, wait_thr = Open3.popen2(*cmd, **opts)
+        stdin, stdout, wait_thr = Open3.popen2(*cmd, **)
         stderr = nil
         [stdin, stdout, stderr, wait_thr]
       end
@@ -157,6 +157,7 @@ module Runmail
 
     private def copy_partial_thread(src, dst, maxlen: 4096)
       return if src.nil? || src.closed?
+
       dst = [dst] unless dst.is_a?(Array)
 
       Thread.new do

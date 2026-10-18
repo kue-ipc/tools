@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
 # frozen_string_literal: true
+# shareable_constant_value: literal
 
 # Update & Reboot script
 
@@ -62,7 +63,7 @@ if $0 == __FILE__
   update_reboot = UpdateReboot.new(**config)
 
   unless ARGV.empty?
-    warn "Unexpected arguments: #{ARGV.join(" ")}"
+    warn "Unexpected arguments: #{ARGV.join(' ')}"
     warn opt
     exit 16
   end
@@ -74,12 +75,10 @@ if $0 == __FILE__
 
   result = update_reboot.runmail_update_reboot(**update_reboot_config)
 
-  Thread.list.select { |th| th.is_a?(Process::Waiter) }.each do |th|
+  Thread.list.grep(Process::Waiter).each do |th|
     warn "waiting a running process..."
     th.join
   end
 
-  unless result.success?
-    exit 1
-  end
+  exit 1 unless result.success?
 end

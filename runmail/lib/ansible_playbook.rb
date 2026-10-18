@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# shareable_constant_value: literal
 
 # Ansible Playbook
 # v0.2.0
@@ -26,14 +27,14 @@ class AnsiblePlaybook < Runmail::Base
       /^ok: \[.*$/,
       /^skipping: \[.*$/,
       /^changed: \[.*$/,
-      /^included: \/.*$/,
+      %r{^included: /.*$},
       /^TASK \[.*\R+(?=(TASK|PLAY) \[|PLAY RECAP)/,
       /^\R/,
     ],
     normal: [
       /^ok: \[.*$/,
       /^skipping: \[.*$/,
-      /^included: \/.*$/,
+      %r{^included: /.*$},
       /^TASK \[.*\R+(?=(TASK|PLAY) \[|PLAY RECAP)/,
       /^\R/,
     ],
@@ -41,12 +42,10 @@ class AnsiblePlaybook < Runmail::Base
     json: [],
   }
 
-  def ansible_playbook(*playbooks, check: false, limit: nil, extra_vars: [], out: :normal, **opts)
+  def ansible_playbook(*playbooks, check: false, limit: nil, extra_vars: [], out: :normal, **)
     cmd = create_cmd(*playbooks, check:, limit:, extra_vars:)
-    if out == :json
-      cmd = [{"ANSIBLE_STDOUT_CALLBACK" => "json"}, *cmd]
-    end
-    result = run(*cmd, **opts)
+    cmd = [{"ANSIBLE_STDOUT_CALLBACK" => "json"}, *cmd] if out == :json
+    result = run(*cmd, **)
     result.info_concat(playbooks.join(" "))
     result.info_concat(" (C)") if check
     result.info_concat(" [#{limit}]") if limit
