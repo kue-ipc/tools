@@ -13,15 +13,6 @@
 require_relative "runmail"
 
 class AnsiblePlaybook < Runmail::Base
-  def runmail_ansible_playbook(...)
-    result = ansible_playbook(...)
-    mail(result)
-    result
-  rescue => e
-    @logger&.error e.full_message(highlight: false, order: :top)
-    raise
-  end
-
   OUT_OMIT = {
     simple: [
       /^ok: \[.*$/,
@@ -41,6 +32,15 @@ class AnsiblePlaybook < Runmail::Base
     full: [],
     json: [],
   }
+
+  def runmail_ansible_playbook(...)
+    result = ansible_playbook(...)
+    mail(result)
+    result
+  rescue => e
+    @logger&.error e.full_message(highlight: false, order: :top)
+    raise
+  end
 
   def ansible_playbook(*playbooks, check: false, limit: nil, extra_vars: [], out: :normal, **)
     cmd = create_cmd(*playbooks, check:, limit:, extra_vars:)
