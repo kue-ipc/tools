@@ -106,22 +106,19 @@ module Runmail
       cmd.join(" ")
     end
 
-    private def run_capture(*cmd, timeout: @timeout, stdin_data: nil, binmode: false, **opts)
+    private def run_capture(*cmd, timeout: @timeout, **)
       out = String.new
       err = String.new
+      stdout_data = [out]
+      stderr_data = [err]
+      unless @quiet
+        stdout_data << $stdout
+        stderr_data << $stderr
+      end
       status = nil
       begin
         Timeout.timeout(timeout) do
-          stdin, stdout, stderr, wait_thr = run_popen(*cmd, **opts)
-          [stdin, stdout, stderr].compact.each(&:binmode) if binmode
-          readers = [
-            copy_partial_thread(stdout, [out, @quiet ? nil : $stdout].compact),
-            copy_partial_thread(stderr, [err, @quiet ? nil : $stderr].compact),
-          ]
-          stdin.write stdin_data if stdin_data&.size&.positive?
-          stdin.close
-          status = wait_thr.value
-          readers.compact.each(&:join)
+          status = run_capture_inner(*cmd, stdout_data:, stderr_data:, **)
         end
       rescue Timeout::Error
         status = :timeout
@@ -133,6 +130,19 @@ module Runmail
       end
       Thread.pass
       [out, err, status]
+    end
+
+    private def run_capture_inner(*cmd, stdout_data: [], stderr_data: [], stdin_data: nil, binmode: false, **)
+      readers = []
+      stdin, stdout, stderr, wait_thr = run_popen(*cmd, **)
+      [stdin, stdout, stderr].compact.each(&:binmode) if binmode
+      readers << copy_partial_thread(stdout, stdout_data)
+      readers << copy_partial_thread(stderr, stderr_data)
+      stdin.write stdin_data if stdin_data&.size&.positive?
+      stdin.close
+      wait_thr.value
+    ensure
+      readers.compact.each(&:join)
     end
 
     private def run_popen(*cmd, stderr: @stderr, **)
